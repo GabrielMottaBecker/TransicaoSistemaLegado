@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-ro
 import ListarUsuarios from "./components/templates/usuarios_template/lista_usuarios";
 import CadastrarUsuarios from './components/templates/usuarios_template/cadastrar_usuarios';
 import EditarUsuario from "./components/templates/usuarios_template/editar_usuarios"; 
-import Home from "./components/templates/home_template/home";
+import Home from "./components/templates/home_template/home.tsx";
 import Login from "./components/templates/login_template/login";
 
 // Componente para rotas protegidas
