@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Users, UserPlus, Briefcase, TrendingUp, ShoppingCart, Package, DollarSign, Activity, LogOut, Menu } from "lucide-react";
+import { Home, Users, Briefcase, TrendingUp, ShoppingCart, Package, DollarSign, Activity, LogOut, Menu } from "lucide-react";
 
 export default function SalesFlowDashboard() {
   const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin");
@@ -22,7 +22,7 @@ export default function SalesFlowDashboard() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
-      {/* 🔵 Sidebar */}
+      {/* Sidebar */}
       <aside style={{
         width: "240px",
         backgroundColor: "#fff",
@@ -50,14 +50,13 @@ export default function SalesFlowDashboard() {
             <Home size={18} />
             <span>Dashboard</span>
           </button>
-
           
           <button onClick={() => navigate("/clientes")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
             <Briefcase size={18} />
             <span>Clientes</span>
           </button>
 
-                    {/* 🔒 Apenas admin pode ver Funcionarios */}
+          {/* Apenas admin pode ver Funcionarios */}
           {nivelAcesso === "admin" && (
             <button onClick={() => navigate("/listar_usuarios")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
               <Users size={18} />
@@ -75,7 +74,7 @@ export default function SalesFlowDashboard() {
             <span>Produtos</span>
           </button>
           
-          <button onClick={() => navigate("/vendas")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
+          <button onClick={() => navigate("/pdv")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
             <DollarSign size={18} />
             <span>Vendas</span>
           </button>
@@ -96,7 +95,7 @@ export default function SalesFlowDashboard() {
         </nav>
       </aside>
 
-      {/* 🏠 Conteúdo Principal */}
+      {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Header com usuário logado */}
         <header style={{
@@ -104,7 +103,6 @@ export default function SalesFlowDashboard() {
           background: "linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)",
           color: "#fff",
           padding: "40px 50px",
-          borderRadius: "0 0 0 0",
           position: "relative"
         }}>
           {/* Avatar e nome do usuário no canto direito */}
@@ -153,29 +151,40 @@ export default function SalesFlowDashboard() {
           </p>
           
           <div style={{ marginTop: "25px", display: "flex", gap: "15px" }}>
-            <button style={{
-              backgroundColor: "#fff",
-              color: "#1e88e5",
-              border: "none",
-              padding: "10px 20px",
-              borderRadius: "6px",
-              fontWeight: 500,
-              cursor: "pointer",
-              fontSize: "14px"
-            }}>
-              📊 Ver Relatórios
-            </button>
-            <button style={{
-              backgroundColor: "rgba(255,255,255,0.2)",
-              color: "#fff",
-              border: "1px solid rgba(255,255,255,0.3)",
-              padding: "10px 20px",
-              borderRadius: "6px",
-              fontWeight: 500,
-              cursor: "pointer",
-              fontSize: "14px"
-            }}>
-              ➕ Nova Venda
+            {/* Botão visível apenas para admin */}
+            {nivelAcesso === "admin" && (
+              <button
+                onClick={() => navigate("/relatorios")}
+                style={{
+                  backgroundColor: "#fff",
+                  color: "#1e88e5",
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: "6px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                Ver Relatórios
+              </button>
+            )}
+
+            {/* Botão sempre visível */}
+            <button
+              onClick={() => navigate("/pdv")}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.2)",
+                color: "#fff",
+                border: "1px solid rgba(255,255,255,0.3)",
+                padding: "10px 20px",
+                borderRadius: "6px",
+                fontWeight: 500,
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              Nova Venda
             </button>
           </div>
         </header>
@@ -400,18 +409,21 @@ export default function SalesFlowDashboard() {
               </div>
 
               {/* Botão de ação */}
-              <button style={{
-                marginTop: "25px",
-                width: "100%",
-                padding: "12px",
-                backgroundColor: "#1e88e5",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                fontWeight: 500,
-                cursor: "pointer",
-                fontSize: "14px"
-              }}>
+              <button 
+                onClick={() => navigate("/relatorios")}
+                style={{
+                  marginTop: "25px",
+                  width: "100%",
+                  padding: "12px",
+                  backgroundColor: "#1e88e5",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontSize: "14px"
+                }}
+              >
                 Ver Relatório Completo
               </button>
             </div>
