@@ -4,6 +4,9 @@ import CadastrarUsuarios from './components/templates/usuarios_template/cadastra
 import EditarUsuario from "./components/templates/usuarios_template/editar_usuarios"; 
 import Home from "./components/templates/home_template/home.tsx";
 import Login from "./components/templates/login_template/login.tsx";
+import PDV from "./components/templates/pdv_template/pdv.tsx";
+import Relatorios from "./components/templates/relatorio_template/Relatorios.tsx";
+
 
 
 // Componente para rotas protegidas
@@ -54,6 +57,22 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route
+            path="/pdv"
+            element={
+              <PrivateRoute>
+                <PDV />
+              </PrivateRoute>
+            }
+          />
+          <Route
+  path="/relatorios"
+  element={
+    <PrivateRoute>
+      <Relatorios />
+    </PrivateRoute>
+  }
+/>  
         </Routes>
       </div>
     </Router>
