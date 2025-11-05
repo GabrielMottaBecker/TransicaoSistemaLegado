@@ -126,7 +126,7 @@ export default function ListarFuncionarios() {
             <span>Produtos</span>
           </button>
           
-          <button onClick={() => navigate("/vendas")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
+          <button onClick={() => navigate("/pdv")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
             <DollarSign size={18} />
             <span>Vendas</span>
           </button>
