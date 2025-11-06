@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Users, Briefcase, TrendingUp, ShoppingCart, Package, DollarSign, Activity, LogOut, Menu } from "lucide-react";
+import { Users, TrendingUp, ShoppingCart, Package, DollarSign, Activity } from "lucide-react";
+import Sidebar from '../../widgets/side_bar.tsx';
 
 export default function SalesFlowDashboard() {
   const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin");
@@ -22,78 +23,12 @@ export default function SalesFlowDashboard() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
-      {/* Sidebar */}
-      <aside style={{
-        width: "240px",
-        backgroundColor: "#fff",
-        borderRight: "1px solid #e0e0e0",
-        display: "flex",
-        flexDirection: "column",
-        padding: "20px 0"
-      }}>
-        {/* Logo */}
-        <div style={{ padding: "0 20px 30px", borderBottom: "1px solid #e0e0e0" }}>
-          <h2 style={{ color: "#1e88e5", fontSize: "20px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
-            <Activity size={24} />
-            SalesFlow
-          </h2>
-          <p style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>Sistema de Vendas</p>
-        </div>
-
-        {/* Menu Principal */}
-        <nav style={{ flex: 1, padding: "20px 0" }}>
-          <div style={{ padding: "0 15px", marginBottom: "15px" }}>
-            <p style={{ fontSize: "11px", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>PRINCIPAL</p>
-          </div>
-          
-          <button onClick={() => navigate("/home")} style={{ ...menuItemStyle, backgroundColor: "#e3f2fd", color: "#1e88e5" }}>
-            <Home size={18} />
-            <span>Dashboard</span>
-          </button>
-          
-          <button onClick={() => navigate("/clientes")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
-            <Briefcase size={18} />
-            <span>Clientes</span>
-          </button>
-
-          {/* Apenas admin pode ver Funcionarios */}
-          {nivelAcesso === "admin" && (
-            <button onClick={() => navigate("/listar_usuarios")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
-              <Users size={18} />
-              <span>Funcionários</span>
-            </button>
-          )}
-          
-          <button onClick={() => navigate("/fornecedores")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
-            <Package size={18} />
-            <span>Fornecedores</span>
-          </button>
-          
-          <button onClick={() => navigate("/produtos")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
-            <ShoppingCart size={18} />
-            <span>Produtos</span>
-          </button>
-          
-          <button onClick={() => navigate("/pdv")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
-            <DollarSign size={18} />
-            <span>Vendas</span>
-          </button>
-
-          <div style={{ padding: "0 15px", marginTop: "25px", marginBottom: "15px" }}>
-            <p style={{ fontSize: "11px", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>SISTEMA</p>
-          </div>
-          
-          <button onClick={() => navigate("/configuracoes")} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
-            <Menu size={18} />
-            <span>Configurações</span>
-          </button>
-          
-          <button onClick={handleLogout} style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}>
-            <LogOut size={18} />
-            <span>Sair</span>
-          </button>
-        </nav>
-      </aside>
+      {/* Sidebar Component */}
+      <Sidebar 
+        usuarioLogado={usuarioLogado}
+        nivelAcesso={nivelAcesso}
+        onLogout={handleLogout}
+      />
 
       {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -433,21 +368,6 @@ export default function SalesFlowDashboard() {
     </div>
   );
 }
-
-const menuItemStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "12px",
-  padding: "12px 20px",
-  textDecoration: "none",
-  fontSize: "14px",
-  fontWeight: 500,
-  transition: "all 0.2s",
-  cursor: "pointer",
-  border: "none",
-  width: "100%",
-  textAlign: "left"
-};
 
 const metricCardStyle: React.CSSProperties = {
   backgroundColor: "#fff",
