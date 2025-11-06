@@ -120,22 +120,7 @@ function Login() {
           }}>
 
 
-            <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-              <div style={{
-                width: "50px",
-                height: "50px",
-                backgroundColor: "rgba(255,255,255,0.2)",
-                borderRadius: "10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "24px"
-              }}>⚡</div>
-              <div>
-                <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>Interface Intuitiva</h4>
-                <p style={{ margin: "4px 0 0", fontSize: "14px", opacity: 0.9 }}>Fácil de usar, rápido de aprender</p>
-              </div>
-            </div>
+
           </div>
         </div>
       </div>
