@@ -407,3 +407,5 @@ const menuItemStyle: React.CSSProperties = {
   color: "#475569" 
 }; 
 const loadingContainerStyle: React.CSSProperties = { minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' };
+
+// --- FIM DOS ESTILOS CSS AUXILIARES ---
