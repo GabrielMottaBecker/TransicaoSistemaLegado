@@ -69,7 +69,7 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
           }}
         >
           <Activity size={24} />
-          SalesFlow
+          Vendify
         </h2>
         <p style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>Sistema de Vendas</p>
       </div>

@@ -80,7 +80,7 @@ export default function SalesFlowDashboard() {
             </div>
           </div>
 
-          <h1 style={{ fontSize: "28px", fontWeight: 600, marginBottom: "8px", marginTop: "20px" }}>Bem-vindo ao SalesFlow</h1>
+          <h1 style={{ fontSize: "28px", fontWeight: 600, marginBottom: "8px", marginTop: "20px" }}>Bem-vindo ao Vendify</h1>
           <p style={{ fontSize: "15px", opacity: 0.95 }}>
             Gerencie suas vendas, clientes e produtos com eficiência. Sistema moderno e responsivo para o crescimento do seu negócio.
           </p>
