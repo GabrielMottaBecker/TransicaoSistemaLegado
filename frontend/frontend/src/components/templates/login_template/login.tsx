@@ -98,7 +98,7 @@ function Login() {
             marginBottom: "30px"
           }}>
             <Activity size={48} strokeWidth={2.5} />
-            <h1 style={{ fontSize: "42px", fontWeight: 700, margin: 0 }}>SalesFlow</h1>
+            <h1 style={{ fontSize: "42px", fontWeight: 700, margin: 0 }}>Vendify</h1>
           </div>
           
           <h2 style={{ fontSize: "28px", fontWeight: 600, marginBottom: "20px" }}>
