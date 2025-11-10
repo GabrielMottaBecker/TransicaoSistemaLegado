@@ -1,25 +1,25 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom"; 
-import { Activity, X, Loader2, MapPin, AlertCircle, Package, Mail, Phone, Edit, Plus, Briefcase } from "lucide-react";
+import { X, Loader2, MapPin, AlertCircle, Plus, Edit, Briefcase, Mail, Phone } from "lucide-react";
 
 /**
- * Interface que define a estrutura de um Fornecedor, baseada no modelo Django.
+ * Interface que define a estrutura de um Fornecedor.
  */
 interface Fornecedor {
   id: number | null;
-  nome: string; // Razão Social
-  cnpj: string;
-  email: string;
-  celular: string;
-  telefone_fixo: string;
-  cep: string;
-  endereco: string;
-  numero_casa: string; // Django: numero_casa
-  bairro: string;
-  cidade: string;
-  uf: string;
-  complemento: string;
-  // Campos extras do formulário (não mapeados diretamente no modelo Django)
+  nome: string; // Razão Social (Mapeado para Nome)
+  cnpj: string; 
+  email: string; 
+  celular: string; 
+  telefone_fixo: string; 
+  cep: string; 
+  endereco: string; 
+  numero_casa: string; 
+  bairro: string; 
+  cidade: string; 
+  uf: string; 
+  complemento: string; 
+  // Mantendo o estado com as chaves originais
   nome_fantasia: string; 
   inscricao_estadual: string;
   nome_contato: string;
@@ -36,7 +36,6 @@ const initialFornecedorState: Fornecedor = {
 
 
 // --- Componentes Auxiliares (Modal de Sucesso) ---
-// 🚨 CORREÇÃO: Adicionado o componente SavedModal para resolver o erro de compilação
 interface SavedModalProps {
     isOpen: boolean;
     message: string;
@@ -69,7 +68,7 @@ const SavedModal: React.FC<SavedModalProps> = ({ isOpen, message, onClose }) => 
 };
 
 
-// --- Componente Principal de Cadastro/Edição de Cliente ---
+// --- Componente Principal de Cadastro/Edição de Fornecedor ---
 
 export default function CadastrarFornecedor() {
     const { id } = useParams<{ id: string }>(); 
@@ -85,7 +84,7 @@ export default function CadastrarFornecedor() {
         if (isEditMode) {
             carregarFornecedorParaEdicao(Number(id));
         }
-    }, [isEditMode, id]);
+    }, [isEditMode, id, navigate]);
     
     // Função para carregar dados do fornecedor via API (GET)
     const carregarFornecedorParaEdicao = async (fornecedorId: number) => {
@@ -108,15 +107,9 @@ export default function CadastrarFornecedor() {
                 endereco: data.endereco,
                 numero_casa: data.numero_casa,
                 bairro: data.bairro,
-                cidade: data.cidade,
+                cidade: data.localidade || data.cidade || '',
                 uf: data.uf,
                 complemento: data.complemento || '',
-                // Campos extras do formulário (que o backend não retorna)
-                nome_fantasia: '', 
-                inscricao_estadual: '', 
-                nome_contato: '',
-                telefone_contato: '',
-                email_contato: '',
             });
 
         } catch (error) {
@@ -166,9 +159,8 @@ export default function CadastrarFornecedor() {
         e.preventDefault();
         setLoading(true);
 
-        // Mapeamento: Frontend -> Django (Apenas campos do modelo!)
+        // Mapeamento: Frontend -> Django (Payload)
         const fornecedorPayload = {
-            // Campos do Modelo Django
             nome: fornecedor.nome,
             cnpj: fornecedor.cnpj,
             email: fornecedor.email,
@@ -181,7 +173,6 @@ export default function CadastrarFornecedor() {
             uf: fornecedor.uf,
             telefone_fixo: fornecedor.telefone_fixo || null, 
             complemento: fornecedor.complemento || null,
-            // Campos extras do formulário (Nome Fantasia, Contato, etc.) SÃO IGNORADOS
         };
         
         try {
@@ -200,7 +191,6 @@ export default function CadastrarFornecedor() {
             if (!res.ok) {
                 const errorData = await res.json();
                 console.error("Erro da API:", errorData);
-                // Mensagem customizada para restrições de unicidade
                 if (errorData.cnpj) alert(`Erro: CNPJ já cadastrado ou inválido.`);
                 else if (errorData.email) alert(`Erro: Email já cadastrado ou inválido.`);
                 else alert(`Falha na operação: ${isEditMode ? "Atualização" : "Cadastro"}. Verifique o console.`);
@@ -225,15 +215,17 @@ export default function CadastrarFornecedor() {
 
     return (
         <div style={pageContainerStyle}>
-            {/* 🏠 Conteúdo Principal */}
+            {/* O Sidebar (não incluído, mas é parte do layout do dashboard) */}
+            
             <main style={mainContentStyle}>
+                {/* Header (Topo da página) */}
                 <header style={headerStyle}>
                     <div style={{ flex: 1 }}>
                         <h1 style={{ fontSize: "24px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>
-                            {isEditMode ? `Editar Fornecedor (ID: ${id})` : "Novo Fornecedor"}
+                            {isEditMode ? `Editar Fornecedor (ID: ${id})` : "Cadastro de Fornecedor"}
                         </h1>
                         <p style={{ fontSize: "14px", color: "#64748b" }}>
-                            Preencha os dados da empresa para {isEditMode ? "atualizar o cadastro." : "iniciar o relacionamento."}
+                            {isEditMode ? "Atualize os dados do fornecedor e clique em Salvar." : "Adicione um novo fornecedor ao sistema preenchendo o formulário abaixo."}
                         </p>
                     </div>
 
@@ -246,58 +238,60 @@ export default function CadastrarFornecedor() {
                     <div style={formCardStyle}>
                         <form onSubmit={handleSubmit}>
                             
-                            {/* Seção 1: Dados da Empresa */}
-                            <h3 style={sectionTitleStyle}><Briefcase size={20} /> Dados da Empresa</h3>
+                            {/* Seção 1: Dados do Fornecedor (Nome, Contatos, CNPJ) */}
+                            <h3 style={sectionTitleStyle}><Briefcase size={20} /> Dados do Fornecedor</h3>
                             <div style={gridContainerStyle}>
-                                {/* Linha 1 */}
-                                <input type="text" name="nome" value={fornecedor.nome} onChange={handleChange} placeholder="Razão Social" style={inputStyle} required />
-                                <input type="text" name="cnpj" value={fornecedor.cnpj} onChange={handleChange} placeholder="CNPJ" style={inputStyle} required />
-                                
-                                {/* Linha 2 (Campos extras do Formulário Original) */}
-                                <input type="text" name="nome_fantasia" value={fornecedor.nome_fantasia} onChange={handleChange} placeholder="Nome Fantasia" style={inputStyle} />
-                                <input type="text" name="inscricao_estadual" value={fornecedor.inscricao_estadual} onChange={handleChange} placeholder="Inscrição Estadual" style={inputStyle} />
-                                
-                                {/* Linha 3 */}
-                                <input type="email" name="email" value={fornecedor.email} onChange={handleChange} placeholder="Email da Empresa" style={inputStyle} required />
-                                <input type="text" name="celular" value={fornecedor.celular} onChange={handleChange} placeholder="Celular (Principal)" style={inputStyle} required />
-                                <input type="text" name="telefone_fixo" value={fornecedor.telefone_fixo} onChange={handleChange} placeholder="Telefone Fixo (Opcional)" style={inputStyle} />
+                                {/* LINHA 1: Nome (Razão Social) + CNPJ */}
+                                <input type="text" name="nome" value={fornecedor.nome} onChange={handleChange} placeholder="1. Nome / Razão Social" style={inputStyle} required />
+                                <input type="text" name="cnpj" value={fornecedor.cnpj} onChange={handleChange} placeholder="12. CNPJ" style={inputStyle} required />
+                                {/* Espaço Vazio para manter a grade (como RG no cliente) */}
+                                <div />
+                            </div>
+                            
+                            <div style={gridContainerStyle}>
+                                {/* LINHA 2: Email, Celular, Telefone Fixo */}
+                                <input type="email" name="email" value={fornecedor.email} onChange={handleChange} placeholder="2. Email" style={inputStyle} required />
+                                <input type="text" name="celular" value={fornecedor.celular} onChange={handleChange} placeholder="3. Celular" style={inputStyle} required />
+                                <input type="text" name="telefone_fixo" value={fornecedor.telefone_fixo} onChange={handleChange} placeholder="4. Telefone Fixo (Opcional)" style={inputStyle} />
                             </div>
 
-                            {/* Seção 2: Endereço */}
+                            {/* Seção 2: Endereço (CEP, Endereco, Número) */}
                             <h3 style={{ ...sectionTitleStyle, marginTop: "30px" }}><MapPin size={20} /> Endereço</h3>
-                            <div style={{ display: "flex", gap: "15px", marginBottom: "15px" }}>
-                                <div style={{ flex: 2, position: 'relative' }}>
+                            
+                            {/* Linha de CEP/Endereço/Número (Layout adaptado para CEP/Endereço em 3 colunas) */}
+                            <div style={gridContainerSmallStyle}> 
+                                {/* 5. CEP */}
+                                <div style={{ position: 'relative' }}>
                                     <input 
                                         type="text" name="cep" value={fornecedor.cep} onChange={handleChange} 
-                                        onBlur={handleBuscarCep} placeholder="CEP" style={{ ...inputStyle, paddingRight: '120px' }}
+                                        onBlur={handleBuscarCep} placeholder="5. CEP (ex: 12345678)" style={{ ...inputStyle, paddingRight: '120px' }}
                                         required maxLength={8}
                                     />
                                     <button type="button" onClick={handleBuscarCep} disabled={loading || fornecedor.cep.length !== 8} style={cepButtonStyle}>
                                         {loading ? <Loader2 size={16} className="animate-spin" /> : "Buscar CEP"}
                                     </button>
                                 </div>
-                                <input type="text" name="endereco" value={fornecedor.endereco} onChange={handleChange} placeholder="Endereço (Rua/Avenida)" style={{ ...inputStyle, flex: 3 }} required />
-                                <input type="text" name="numero_casa" value={fornecedor.numero_casa} onChange={handleChange} placeholder="Número" style={{ ...inputStyle, flex: 1 }} required />
+                                {/* 6. Endereco */}
+                                <input type="text" name="endereco" value={fornecedor.endereco} onChange={handleChange} placeholder="6. Endereço (Rua/Avenida)" style={inputStyle} required />
+                                {/* 7. Número da Casa */}
+                                <input type="text" name="numero_casa" value={fornecedor.numero_casa} onChange={handleChange} placeholder="7. Número da Casa" style={inputStyle} required />
                             </div>
                             
+                            {/* Linha de Bairro/Cidade/UF/Complemento */}
                             <div style={gridContainerStyle}>
-                                <input type="text" name="bairro" value={fornecedor.bairro} onChange={handleChange} placeholder="Bairro" style={inputStyle} required />
-                                <input type="text" name="cidade" value={fornecedor.cidade} onChange={handleChange} placeholder="Cidade" style={inputStyle} required />
+                                {/* 8. Bairro */}
+                                <input type="text" name="bairro" value={fornecedor.bairro} onChange={handleChange} placeholder="8. Bairro" style={inputStyle} required />
+                                {/* 9. Cidade */}
+                                <input type="text" name="cidade" value={fornecedor.cidade} onChange={handleChange} placeholder="9. Cidade" style={inputStyle} required />
+                                {/* 11. UF */}
                                 <select name="uf" value={fornecedor.uf} onChange={handleChange} style={inputStyle} required>
-                                    <option value="">UF</option>
+                                    <option value="">11. UF</option>
                                     {["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"].map(uf => (
                                         <option key={uf} value={uf}>{uf}</option>
                                     ))}
                                 </select>
-                                <input type="text" name="complemento" value={fornecedor.complemento} onChange={handleChange} placeholder="Complemento (Opcional)" style={inputStyle} />
-                            </div>
-
-                            {/* Seção 3: Contato (Ignorados no Payload do Modelo) */}
-                            <h3 style={{ ...sectionTitleStyle, marginTop: "30px" }}><Mail size={20} /> Contato Responsável</h3>
-                            <div style={gridContainerStyle}>
-                                <input type="text" name="nome_contato" value={fornecedor.nome_contato} onChange={handleChange} placeholder="Nome do Contato" style={inputStyle} />
-                                <input type="text" name="telefone_contato" value={fornecedor.telefone_contato} onChange={handleChange} placeholder="Telefone do Contato" style={inputStyle} />
-                                <input type="email" name="email_contato" value={fornecedor.email_contato} onChange={handleChange} placeholder="Email do Contato" style={inputStyle} />
+                                {/* 10. Complemento */}
+                                <input type="text" name="complemento" value={fornecedor.complemento} onChange={handleChange} placeholder="10. Complemento (Opcional)" style={inputStyle} />
                             </div>
                             
                             {/* Botão de Submissão */}
@@ -328,7 +322,7 @@ export default function CadastrarFornecedor() {
     );
 }
 
-// --- Estilos CSS (Reutilizados de Cliente/Usuário) ---
+// --- Estilos CSS (Reutilizados do CadastrarCliente para consistência) ---
 const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
 const modalContentStyle: React.CSSProperties = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '100%', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' };
 const closeButtonStyle: React.CSSProperties = { border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' };
@@ -336,13 +330,16 @@ const modalPrimaryButtonStyle: React.CSSProperties = { backgroundColor: '#1e88e5
 const pageContainerStyle: React.CSSProperties = { display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" };
 const mainContentStyle: React.CSSProperties = { flex: 1, display: "flex", flexDirection: "column" };
 const headerStyle: React.CSSProperties = { backgroundColor: "#fff", padding: "20px 50px", borderBottom: "1px solid #e0e0e0", display: "flex", justifyContent: "space-between", alignItems: "center" };
-const backButtonStyle: React.CSSProperties = { backgroundColor: "#ff9800", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" };
+const backButtonStyle: React.CSSProperties = { backgroundColor: "#f1f5f9", color: "#64748b", border: "none", padding: "10px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" };
 const formWrapperStyle: React.CSSProperties = { padding: "30px", flexGrow: 1 };
-const formCardStyle: React.CSSProperties = { backgroundColor: "#fff", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", maxWidth: "1000px", margin: "0 auto" };
+const formCardStyle: React.CSSProperties = { backgroundColor: "#fff", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", maxWidth: "900px", margin: "0 auto" };
 const sectionTitleStyle: React.CSSProperties = { fontSize: "18px", fontWeight: 600, color: "#1e293b", borderBottom: "1px solid #e0e0e0", paddingBottom: "10px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" };
+// Estilos Grid 3 Colunas: Padrão do Cliente
 const gridContainerStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px", marginBottom: "15px" };
+// Estilo adaptado para Endereço, mantendo o aspecto de 3 colunas, mas com proporções do cliente.
+const gridContainerSmallStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "2fr 3fr 1fr", gap: "15px", marginBottom: "15px" };
 const inputStyle: React.CSSProperties = { padding: "12px", border: "1px solid #e2e8f0", borderRadius: "8px", width: "100%", boxSizing: "border-box", fontSize: "14px" };
-const submitButtonStyle: React.CSSProperties = { width: "100%", padding: "14px", backgroundColor: "#ff9800", color: "#fff", border: "none", borderRadius: "8px", fontSize: "18px", fontWeight: 600, cursor: "pointer", transition: "background-color 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" };
+const submitButtonStyle: React.CSSProperties = { width: "100%", padding: "14px", backgroundColor: "#10b981", color: "#fff", border: "none", borderRadius: "8px", fontSize: "18px", fontWeight: 600, cursor: "pointer", transition: "background-color 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" };
 const spinIconStyle: React.CSSProperties = { animation: "spin 1s linear infinite" };
 const cepButtonStyle: React.CSSProperties = { position: 'absolute', right: '5px', top: '50%', transform: 'translateY(-50%)', backgroundColor: '#1e88e5', color: '#fff', border: 'none', padding: '8px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' };
 const loadingContainerStyle: React.CSSProperties = { minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' };
