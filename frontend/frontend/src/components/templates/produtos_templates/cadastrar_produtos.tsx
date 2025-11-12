@@ -12,17 +12,18 @@ interface Produto {
   quantidade_estoque: string;
   desconto_percentual: string;
   codigo_barras: string;
-  ativo: boolean;
-  categoria: string; 
-  unidade_medida: string;
+  ativo: boolean; 
 }
 
 const initialProdutoState: Produto = {
-    id: null, descricao: "", preco: "0.00", quantidade_estoque: "0", 
-    desconto_percentual: "0.00", codigo_barras: "", ativo: true,
-    categoria: "", unidade_medida: "",
+    id: null,
+    descricao: "",
+    preco: "0.00",
+    quantidade_estoque: "0",
+    desconto_percentual: "0.00",
+    codigo_barras: "",
+    ativo: true,
 };
-
 
 // --- Componentes Auxiliares (Modal de Sucesso) ---
 interface SavedModalProps {
