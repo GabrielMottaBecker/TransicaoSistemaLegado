@@ -2,6 +2,9 @@ import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom"; 
 import { X, Loader2, MapPin, AlertCircle, Plus, Edit, Briefcase, Mail, Phone } from "lucide-react";
 
+// 🚨 CORREÇÃO FINAL: Usando a importação PADRÃO (sem chaves) para ser compatível com export default no side_bar.tsx
+import Sidebar from '../../widgets/side_bar.tsx'; 
+
 /**
  * Interface que define a estrutura de um Fornecedor.
  */
@@ -71,6 +74,7 @@ const SavedModal: React.FC<SavedModalProps> = ({ isOpen, message, onClose }) => 
 // --- Componente Principal de Cadastro/Edição de Fornecedor ---
 
 export default function CadastrarFornecedor() {
+    // Detecta se estamos no modo de edição baseado no parâmetro ID da URL
     const { id } = useParams<{ id: string }>(); 
     const isEditMode = !!id;
 
@@ -90,11 +94,13 @@ export default function CadastrarFornecedor() {
     const carregarFornecedorParaEdicao = async (fornecedorId: number) => {
         setLoading(true);
         try {
+            // A API deve responder a esta rota para carregar os dados
             const res = await fetch(`http://127.0.0.1:8000/api/fornecedores/${fornecedorId}/`);
             if (!res.ok) throw new Error("Fornecedor não encontrado.");
             
             const data = await res.json();
             
+            // Popula o estado com os dados recebidos da API
             setFornecedor({
                 ...initialFornecedorState, 
                 id: data.id,
@@ -176,6 +182,7 @@ export default function CadastrarFornecedor() {
         };
         
         try {
+            // Define a URL e o método: POST para novo, PUT para edição
             const url = isEditMode && fornecedor.id 
                 ? `http://127.0.0.1:8000/api/fornecedores/${fornecedor.id}/` 
                 : `http://127.0.0.1:8000/api/fornecedores/`;
@@ -215,7 +222,9 @@ export default function CadastrarFornecedor() {
 
     return (
         <div style={pageContainerStyle}>
-            {/* O Sidebar (não incluído, mas é parte do layout do dashboard) */}
+            
+            {/* O Sidebar (Usa o componente importado corretamente) */}
+            <Sidebar /> 
             
             <main style={mainContentStyle}>
                 {/* Header (Topo da página) */}
@@ -287,7 +296,7 @@ export default function CadastrarFornecedor() {
                                 <select name="uf" value={fornecedor.uf} onChange={handleChange} style={inputStyle} required>
                                     <option value="">11. UF</option>
                                     {["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"].map(uf => (
-                                        <option key={uf} value={uf}>{uf}</option>
+                                        <option key={uf} value={uf} style={{ padding: '12px' }}>{uf}</option>
                                     ))}
                                 </select>
                                 {/* 10. Complemento */}
@@ -322,7 +331,7 @@ export default function CadastrarFornecedor() {
     );
 }
 
-// --- Estilos CSS (Reutilizados do CadastrarCliente para consistência) ---
+// --- Estilos CSS (Garantir que sejam incluídos) ---
 const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
 const modalContentStyle: React.CSSProperties = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '100%', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' };
 const closeButtonStyle: React.CSSProperties = { border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' };
@@ -334,9 +343,7 @@ const backButtonStyle: React.CSSProperties = { backgroundColor: "#f1f5f9", color
 const formWrapperStyle: React.CSSProperties = { padding: "30px", flexGrow: 1 };
 const formCardStyle: React.CSSProperties = { backgroundColor: "#fff", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", maxWidth: "900px", margin: "0 auto" };
 const sectionTitleStyle: React.CSSProperties = { fontSize: "18px", fontWeight: 600, color: "#1e293b", borderBottom: "1px solid #e0e0e0", paddingBottom: "10px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" };
-// Estilos Grid 3 Colunas: Padrão do Cliente
 const gridContainerStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px", marginBottom: "15px" };
-// Estilo adaptado para Endereço, mantendo o aspecto de 3 colunas, mas com proporções do cliente.
 const gridContainerSmallStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "2fr 3fr 1fr", gap: "15px", marginBottom: "15px" };
 const inputStyle: React.CSSProperties = { padding: "12px", border: "1px solid #e2e8f0", borderRadius: "8px", width: "100%", boxSizing: "border-box", fontSize: "14px" };
 const submitButtonStyle: React.CSSProperties = { width: "100%", padding: "14px", backgroundColor: "#10b981", color: "#fff", border: "none", borderRadius: "8px", fontSize: "18px", fontWeight: 600, cursor: "pointer", transition: "background-color 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" };

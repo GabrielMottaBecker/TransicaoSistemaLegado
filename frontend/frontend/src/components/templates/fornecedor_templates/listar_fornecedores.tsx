@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Edit, Trash2, Mail, Phone, Loader2 } from "lucide-react";
-// Importação do Sidebar que deve ser usado para consistência
+// 🚨 CORREÇÃO FINAL: Usando a importação PADRÃO (sem chaves) para ser compatível com export default no side_bar.tsx
 import Sidebar from '../../widgets/side_bar.tsx'; 
 
 // --- Interfaces ---
@@ -100,7 +100,7 @@ export default function ListarFornecedores() {
   const handleNovoFornecedor = () => {
       navigate("/cadastrar_fornecedor"); 
   };
-
+  
   const handleLogout = () => {
     localStorage.removeItem("usuarioLogado");
     localStorage.removeItem("nivelAcesso");
@@ -118,7 +118,7 @@ export default function ListarFornecedores() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
       
-      {/* Sidebar usando o componente importado */}
+      {/* 1. Sidebar usando o componente importado corretamente */}
       <Sidebar
         usuarioLogado={usuarioLogado}
         nivelAcesso={nivelAcesso}
@@ -127,7 +127,7 @@ export default function ListarFornecedores() {
 
       {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
+        {/* Header (Top Bar) - Padrão dos outros componentes */}
         <header style={{
           backgroundColor: "#fff",
           padding: "20px 50px",
