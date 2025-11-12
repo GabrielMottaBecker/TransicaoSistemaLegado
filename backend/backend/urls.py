@@ -17,15 +17,15 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from django.contrib import admin
+from django.urls import path, include
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('funcionarios.urls')),
     path('api/fornecedores/', include('fornecedores.urls')),
-    path ('api/clientes/', include('clientes.urls')),
-    path('api/produtos/', include('produtos.urls')),
+    path('api/clientes/', include('clientes.urls')),
+    path('api/', include('produtos.urls')),  # ✅ corrigido aqui
     path('api/vendas/', include('vendas.urls')),
     path("api/reports/", include("reports.urls")),
-
-
-    
 ]

@@ -1,11 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Edit, Trash2, Loader2, ShoppingCart } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Loader2, Package } from "lucide-react";
+import Sidebar from "../../widgets/side_bar.tsx";
 
-// Importação da Sidebar externa para garantir o padrão
-import Sidebar from '../../widgets/side_bar.tsx'; 
-
-// --- Interfaces ---
 interface Produto {
   id: number;
   descricao: string;
@@ -14,12 +11,9 @@ interface Produto {
   desconto_percentual: number;
   codigo_barras: string | null;
   ativo: boolean;
-  preco_com_desconto: number; // Campo ReadOnly do Serializer
 }
 
-// --- Estilos CSS (Padronizados) ---
-// Usamos apenas os estilos que são comuns à tabela e ações, 
-// o layout principal (header/card) é replicado via styles inline
+// Estilos padronizados
 const tableHeaderStyle: React.CSSProperties = {
   padding: "16px 20px",
   textAlign: "left",
@@ -36,32 +30,12 @@ const tableCellStyle: React.CSSProperties = {
   color: "#334155"
 };
 
-const actionButtonStyle: React.CSSProperties = { 
-  backgroundColor: "transparent", 
-  border: "none", 
-  cursor: "pointer", 
-  padding: "6px", 
-  borderRadius: "6px", 
-  display: "flex", 
-  alignItems: "center", 
-  justifyContent: "center" 
-};
-
-// Estilo para o ícone de carregamento (animação não é suportada por inline style diretamente no React sem definição externa)
-const loadingIconStyle: React.CSSProperties = { 
-  color: '#1e88e5', 
-  margin: '0 auto 10px',
-  // A propriedade animation não funciona com CSSProperties nativas. 
-  // Para fins de demonstração visual, o icon será exibido, mas a animação precisa de CSS global ou styled-components.
-}; 
-
-// --- Componente Principal de Listagem ---
 export default function ListarProdutos() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin"); 
-  const [nivelAcesso, setNivelAcesso] = useState<string>("admin"); 
+  const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin");
+  const [nivelAcesso, setNivelAcesso] = useState<string>("admin");
 
   const navigate = useNavigate();
 
@@ -70,84 +44,66 @@ export default function ListarProdutos() {
     const nivel = localStorage.getItem("nivelAcesso");
     if (user) setUsuarioLogado(user);
     if (nivel) setNivelAcesso(nivel);
-    
+
     carregarProdutos();
   }, []);
 
   const carregarProdutos = async () => {
     setLoading(true);
     try {
-        const response = await fetch("http://127.0.0.1:8000/api/produtos/"); 
-        
-        if (!response.ok) {
-           throw new Error(`Falha ao buscar produtos. Status: ${response.status}`);
-        }
-        
-        const data: Produto[] = await response.json();
-        setProdutos(data);
+      const response = await fetch("http://127.0.0.1:8000/api/produtos/");
+      if (!response.ok) throw new Error(`Erro ${response.status}`);
+      
+      const data = await response.json();
+      const lista = Array.isArray(data) ? data : data.results || data.data || [];
+      setProdutos(lista);
     } catch (error) {
-        console.error("Erro ao carregar produtos:", error);
-        alert("Erro de conexão com o backend. Verifique o servidor Django.");
-        setProdutos([]);
+      console.error("Erro ao carregar produtos:", error);
+      alert("Erro ao conectar com o servidor Django.");
+      setProdutos([]);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Tem certeza que deseja excluir este produto?")) {
-        try {
-            const response = await fetch(`http://127.0.0.1:8000/api/produtos/${id}/`, { method: "DELETE" });
-            
-            if (!response.ok) {
-                const errorText = await response.text(); 
-                throw new Error(`Falha na exclusão. Detalhe: ${errorText}`);
-            }
-            carregarProdutos(); 
-        } catch (error) {
-            console.error("Erro ao excluir produto:", error);
-            alert("Erro ao excluir produto. Tente novamente ou verifique o console.");
-        }
+    if (window.confirm("Tem certeza que deseja excluir este produto? Esta ação é irreversível.")) {
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/api/produtos/${id}/`, {
+          method: "DELETE",
+        });
+        if (!response.ok) throw new Error("Erro ao excluir");
+        carregarProdutos();
+      } catch (error) {
+        console.error(error);
+        alert("Erro ao excluir produto.");
+      }
     }
   };
-  
-  const handleNovoProduto = () => {
-      navigate("/cadastrar_produto"); 
-  };
-  
-  const handleEditarProduto = (id: number) => {
-      navigate(`/editar_produto/${id}`); 
-  };
 
+  const handleNovoProduto = () => navigate("/cadastrar_produto");
+  const handleEditarProduto = (id: number) => navigate(`/editar_produto/${id}`);
   const handleLogout = () => {
     localStorage.removeItem("usuarioLogado");
     localStorage.removeItem("nivelAcesso");
     navigate("/");
   };
 
-  const produtosFiltrados = (Array.isArray(produtos) ? produtos : []).filter(prod =>
-    prod.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (prod.codigo_barras && prod.codigo_barras.includes(searchTerm))
+  const produtosFiltrados = produtos.filter(
+    (p) =>
+      p.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.codigo_barras && p.codigo_barras.includes(searchTerm))
   );
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
-
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-      
-      {/* 1. USANDO O COMPONENTE EXTERNO Sidebar */}
-      <Sidebar
-        usuarioLogado={usuarioLogado}
-        nivelAcesso={nivelAcesso}
-        onLogout={handleLogout}
-      />
+      <Sidebar usuarioLogado={usuarioLogado} nivelAcesso={nivelAcesso} onLogout={handleLogout} />
 
-      {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header (Top Bar) - Padrão dos outros componentes */}
+        {/* Header */}
         <header style={{
           backgroundColor: "#fff",
           padding: "20px 50px",
@@ -197,7 +153,7 @@ export default function ListarProdutos() {
           </div>
         </header>
 
-        {/* Conteúdo da Tabela */}
+        {/* Conteúdo */}
         <div style={{ padding: "30px 50px" }}>
           {/* Card principal */}
           <div style={{
@@ -225,7 +181,7 @@ export default function ListarProdutos() {
               <button
                 onClick={handleNovoProduto}
                 style={{
-                  backgroundColor: "#1e88e5", // Cor azul consistente
+                  backgroundColor: "#1e88e5",
                   color: "#fff",
                   border: "none",
                   padding: "10px 20px",
@@ -277,9 +233,8 @@ export default function ListarProdutos() {
                 <thead>
                   <tr style={{ backgroundColor: "#f8f9fa" }}>
                     <th style={tableHeaderStyle}>Descrição</th>
-                    <th style={tableHeaderStyle}>Preço Base</th>
+                    <th style={tableHeaderStyle}>Preço</th>
                     <th style={tableHeaderStyle}>Desconto (%)</th>
-                    <th style={tableHeaderStyle}>Preço Final</th>
                     <th style={tableHeaderStyle}>Estoque</th>
                     <th style={tableHeaderStyle}>Cód. Barras</th>
                     <th style={tableHeaderStyle}>Status</th>
@@ -289,19 +244,23 @@ export default function ListarProdutos() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={8} style={{
+                      <td colSpan={7} style={{
                         padding: "40px",
                         textAlign: "center",
                         color: "#94a3b8",
                         fontSize: "14px"
                       }}>
-                        <Loader2 size={24} style={loadingIconStyle} />
+                        <Loader2 size={24} style={{ 
+                          color: '#1e88e5', 
+                          margin: '0 auto 10px',
+                          animation: 'spin 1s linear infinite'
+                        }} />
                         <p>Carregando dados...</p>
                       </td>
                     </tr>
                   ) : produtosFiltrados.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{
+                      <td colSpan={7} style={{
                         padding: "40px",
                         textAlign: "center",
                         color: "#94a3b8",
@@ -311,15 +270,18 @@ export default function ListarProdutos() {
                       </td>
                     </tr>
                   ) : (
-                    produtosFiltrados.map((prod) => (
-                      <tr key={prod.id} style={{
-                        borderBottom: "1px solid #e0e0e0",
-                        transition: "background-color 0.2s"
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}>
+                    produtosFiltrados.map((p) => (
+                      <tr 
+                        key={p.id} 
+                        style={{
+                          borderBottom: "1px solid #e0e0e0",
+                          transition: "background-color 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+                      >
                         <td style={tableCellStyle}>
-                           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <div style={{
                               width: "36px",
                               height: "36px",
@@ -332,40 +294,89 @@ export default function ListarProdutos() {
                               fontWeight: 600,
                               fontSize: "14px"
                             }}>
-                              {prod.descricao.charAt(0).toUpperCase()}
+                              <Package size={18} />
                             </div>
-                            <span style={{ fontWeight: 500 }}>{prod.descricao}</span>
+                            <span style={{ fontWeight: 500 }}>{p.descricao}</span>
                           </div>
                         </td>
-                        <td style={tableCellStyle}>{formatCurrency(prod.preco)}</td>
-                        <td style={tableCellStyle}>{prod.desconto_percentual.toFixed(2)}%</td>
-                        <td style={{...tableCellStyle, fontWeight: 600}}>{formatCurrency(prod.preco_com_desconto)}</td>
-                        <td style={tableCellStyle}>{prod.quantidade_estoque}</td>
-                        <td style={tableCellStyle}>{prod.codigo_barras || 'N/A'}</td>
                         <td style={tableCellStyle}>
+                          <span style={{ fontWeight: 600, color: "#16a34a" }}>
+                            {formatCurrency(p.preco)}
+                          </span>
+                        </td>
+                        <td style={tableCellStyle}>
+                          {p.desconto_percentual > 0 ? (
                             <span style={{
-                                backgroundColor: prod.ativo ? '#e8f5e9' : '#fce4ec',
-                                color: prod.ativo ? '#4caf50' : '#e91e63',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500
+                              backgroundColor: "#fef3c7",
+                              color: "#92400e",
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: 500
                             }}>
-                                {prod.ativo ? 'Ativo' : 'Inativo'}
+                              {p.desconto_percentual}%
                             </span>
+                          ) : (
+                            <span style={{ color: "#94a3b8" }}>0%</span>
+                          )}
+                        </td>
+                        <td style={tableCellStyle}>
+                          <span style={{
+                            color: p.quantidade_estoque < 10 ? "#dc2626" : "#334155",
+                            fontWeight: p.quantidade_estoque < 10 ? 600 : 400
+                          }}>
+                            {p.quantidade_estoque}
+                          </span>
+                        </td>
+                        <td style={tableCellStyle}>
+                          <span style={{ color: "#64748b", fontFamily: "monospace" }}>
+                            {p.codigo_barras || "N/A"}
+                          </span>
+                        </td>
+                        <td style={tableCellStyle}>
+                          <span style={{
+                            backgroundColor: p.ativo ? "#dcfce7" : "#fee2e2",
+                            color: p.ativo ? "#166534" : "#991b1b",
+                            padding: "4px 12px",
+                            borderRadius: "12px",
+                            fontSize: "12px",
+                            fontWeight: 500
+                          }}>
+                            {p.ativo ? "Ativo" : "Inativo"}
+                          </span>
                         </td>
                         <td style={tableCellStyle}>
                           <div style={{ display: "flex", gap: "8px" }}>
                             <button
-                              onClick={() => handleEditarProduto(prod.id)}
-                              style={{ ...actionButtonStyle, color: "#1e88e5" }}
+                              onClick={() => handleEditarProduto(p.id)}
+                              style={{
+                                backgroundColor: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "#1e88e5",
+                                padding: "6px",
+                                borderRadius: "6px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}
                               title="Editar"
                             >
                               <Edit size={18} />
                             </button>
                             <button
-                              onClick={() => handleDelete(prod.id)}
-                              style={{ ...actionButtonStyle, color: "#ef4444" }}
+                              onClick={() => handleDelete(p.id)}
+                              style={{
+                                backgroundColor: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "#ef4444",
+                                padding: "6px",
+                                borderRadius: "6px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                              }}
                               title="Excluir"
                             >
                               <Trash2 size={18} />
@@ -384,6 +395,3 @@ export default function ListarProdutos() {
     </div>
   );
 }
-
-// NOTE: Todo o bloco de estilos da sidebar foi removido daqui para forçar o uso do Sidebar importado 
-// e manter apenas os estilos de tabela necessários.
