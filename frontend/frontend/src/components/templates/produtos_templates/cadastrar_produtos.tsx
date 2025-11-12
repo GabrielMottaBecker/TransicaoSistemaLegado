@@ -96,9 +96,10 @@ export default function CadastrarProduto() {
                 ...initialProdutoState,
                 id: data.id,
                 descricao: data.descricao,
-                preco: String(data.preco),
+                // Ao carregar, garantimos que o formato de ponto do backend seja exibido (ou '0.00' se for nulo)
+                preco: data.preco ? String(data.preco).replace('.', ',') : "0,00",
                 quantidade_estoque: String(data.quantidade_estoque),
-                desconto_percentual: String(data.desconto_percentual),
+                desconto_percentual: data.desconto_percentual ? String(data.desconto_percentual).replace('.', ',') : "0,00",
                 codigo_barras: data.codigo_barras || '',
                 ativo: data.ativo,
             });
@@ -111,6 +112,19 @@ export default function CadastrarProduto() {
             setLoading(false);
         }
     };
+    
+    // 🚨 CORREÇÃO: Função para normalizar a entrada do usuário (vírgula para ponto)
+    const normalizeFloatInput = (value: string | number | undefined): number => {
+        if (typeof value === 'number') return value;
+        if (!value) return 0.00;
+        
+        // 1. Substitui vírgula por ponto para obedecer ao formato da API.
+        const normalized = String(value).replace(',', '.');
+        
+        // 2. Tenta converter, retornando 0.00 se a string não for numérica válida.
+        return parseFloat(normalized) || 0.00;
+    };
+
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -118,6 +132,7 @@ export default function CadastrarProduto() {
         if (name === 'ativo') {
             setProduto(prev => ({ ...prev, ativo: (e.target as HTMLInputElement).checked }));
         } else {
+            // Mantém a vírgula no estado local para o usuário ver
             setProduto(prev => ({ ...prev, [name]: value }));
         }
     };
@@ -127,11 +142,15 @@ export default function CadastrarProduto() {
         e.preventDefault();
         setLoading(true);
 
+        // 🚨 APLICAÇÃO DA CORREÇÃO: Usamos normalizeFloatInput antes de enviar
         const produtoPayload = {
-            descricao: produto.descricao,
-            preco: parseFloat(produto.preco) || 0.00,
-            quantidade_estoque: parseInt(produto.quantidade_estoque, 10) || 0,
-            desconto_percentual: parseFloat(produto.desconto_percentual) || 0.00,
+            descricao: produto.descricao || null, // Garante que string vazia vá como null se o backend permitir
+            // Preço é normalizado para ponto
+            preco: normalizeFloatInput(produto.preco) || null,
+            // Quantidade é Int, mas pode ser null se o campo estiver vazio
+            quantidade_estoque: produto.quantidade_estoque ? parseInt(produto.quantidade_estoque, 10) : null,
+            // Desconto é normalizado para ponto
+            desconto_percentual: normalizeFloatInput(produto.desconto_percentual) || 0.00, // Desconto padrão 0.00 se vazio
             codigo_barras: produto.codigo_barras || null,
             ativo: produto.ativo,
         };
@@ -150,10 +169,11 @@ export default function CadastrarProduto() {
             });
             
             if (!res.ok) {
+                // Tenta ler os dados de erro do DRF se disponíveis
                 const errorData = await res.json();
                 console.error("Erro da API:", errorData);
-                if (errorData.codigo_barras) alert(`Erro: Código de Barras já existe ou é inválido.`);
-                else alert(`Falha na operação: ${isEditMode ? "Atualização" : "Cadastro"}. Verifique o console.`);
+                // Exibe o erro genérico do frontend, mas o console terá os detalhes do DRF
+                alert(`Falha na operação: ${isEditMode ? "Atualização" : "Cadastro"}. Verifique o console.`);
                 setLoading(false);
                 return;
             }
@@ -174,8 +194,6 @@ export default function CadastrarProduto() {
 
     return (
         <div style={pageContainerStyle}>
-            {/* A Sidebar foi removida daqui, seguindo o padrão das telas de Cadastro de Cliente/Usuário */}
-            
             {/* Conteúdo Principal */}
             <main style={mainContentStyle}>
                 {/* Header (Topo da página) */}
@@ -211,7 +229,8 @@ export default function CadastrarProduto() {
                                     {/* 1. Descrição */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="descricao" style={labelStyle}>Descrição:</label>
-                                        <input id="descricao" type="text" name="descricao" value={produto.descricao} onChange={handleChange} placeholder="Nome completo do produto" style={inputStyle} required />
+                                        {/* Removido 'required' para flexibilização */}
+                                        <input id="descricao" type="text" name="descricao" value={produto.descricao} onChange={handleChange} placeholder="Nome completo do produto" style={inputStyle} />
                                         <small style={hintStyle}>Nome de exibição e identificação do produto.</small>
                                     </div>
                                     
@@ -229,21 +248,40 @@ export default function CadastrarProduto() {
                                     {/* 3. Preço */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="preco" style={labelStyle}>Preço:</label>
-                                        <input id="preco" type="number" name="preco" value={produto.preco} onChange={handleChange} placeholder="0.00" step="0.01" style={inputStyle} required />
+                                        {/* Alterado para type="text" para permitir vírgula. Removido 'required' */}
+                                        <input 
+                                            id="preco" 
+                                            type="text" 
+                                            name="preco" 
+                                            value={produto.preco} 
+                                            onChange={handleChange} 
+                                            placeholder="0,00" 
+                                            style={inputStyle} 
+                                        />
                                         <small style={hintStyle}>Preço de venda base unitário do produto (R$).</small>
                                     </div>
                                     
                                     {/* 4. Quantidade em Estoque */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="quantidade_estoque" style={labelStyle}>Quantidade em Estoque:</label>
-                                        <input id="quantidade_estoque" type="number" name="quantidade_estoque" value={produto.quantidade_estoque} onChange={handleChange} placeholder="0" style={inputStyle} required />
+                                        {/* Removido 'required' para flexibilização */}
+                                        <input id="quantidade_estoque" type="number" name="quantidade_estoque" value={produto.quantidade_estoque} onChange={handleChange} placeholder="0" style={inputStyle} />
                                         <small style={hintStyle}>Quantidade atual em seu inventário físico.</small>
                                     </div>
                                     
                                     {/* 5. Desconto (%) */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="desconto_percentual" style={labelStyle}>Desconto (%):</label>
-                                        <input id="desconto_percentual" type="number" name="desconto_percentual" value={produto.desconto_percentual} onChange={handleChange} placeholder="0.00" step="0.01" style={inputStyle} />
+                                        {/* Alterado para type="text" para permitir vírgula. */}
+                                        <input 
+                                            id="desconto_percentual" 
+                                            type="text" 
+                                            name="desconto_percentual" 
+                                            value={produto.desconto_percentual} 
+                                            onChange={handleChange} 
+                                            placeholder="0,00" 
+                                            style={inputStyle} 
+                                        />
                                         <small style={hintStyle}>Percentual máximo de desconto permitido.</small>
                                     </div>
                                 </div>
@@ -271,6 +309,7 @@ export default function CadastrarProduto() {
                                     disabled={loading}
                                     style={submitButtonStyle}
                                 >
+                                    {/* A seta (Plus/Edit) vai funcionar quando o loading for false */}
                                     {loading ? <Loader2 size={24} style={spinIconStyle} /> : (isEditMode ? <Edit size={24} /> : <Plus size={24} />)}
                                     {loading ? "Salvando..." : (isEditMode ? "Salvar Edição" : "Cadastrar Produto")}
                                 </button>
