@@ -25,7 +25,7 @@ urlpatterns = [
     path('', include('funcionarios.urls')),
     path('api/fornecedores/', include('fornecedores.urls')),
     path('api/clientes/', include('clientes.urls')),
-    path('api/', include('produtos.urls')),  # ✅ corrigido aqui
-    path('api/vendas/', include('vendas.urls')),
+    path('api/', include('produtos.urls')),
+    path('api/', include('vendas.urls')),  # ← Remova o 'vendas/' daqui
     path("api/reports/", include("reports.urls")),
 ]
