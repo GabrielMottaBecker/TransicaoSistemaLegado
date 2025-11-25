@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Users, Briefcase, ShoppingCart, Package, DollarSign, Activity, LogOut } from "lucide-react";
+// Importamos 'TrendingUp' ou 'Activity' para o ícone de Relatórios
+import { Home, Users, Briefcase, ShoppingCart, Package, DollarSign, Activity, LogOut, TrendingUp } from "lucide-react"; 
 
 interface SidebarProps {
   usuarioLogado?: string;
@@ -42,6 +43,8 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
     { path: "/fornecedores", icon: Package, label: "Fornecedores" },
     { path: "/produtos", icon: ShoppingCart, label: "Produtos" },
     { path: "/pdv", icon: DollarSign, label: "Vendas" },
+    // 🚨 ADIÇÃO: Rotas de Relatórios
+    { path: "/relatorios", icon: TrendingUp, label: "Relatórios", adminOnly: true }, 
   ];
 
   return (
@@ -91,12 +94,13 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
         </div>
 
         {menuItems.map((item) => {
-          // ✅ Só mostra o item se for admin OU se não for adminOnly
+          // ✅ A seção PRINCIPAL agora inclui o Relatório no mapeamento antes de renderizar
           if (item.adminOnly && nivelAcesso !== "admin") return null;
 
           const Icon = item.icon;
           const active = isActive(item.path);
 
+          // Renderiza o item
           return (
             <button
               key={item.path}

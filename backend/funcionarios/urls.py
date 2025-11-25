@@ -1,11 +1,14 @@
+# funcionarios/urls.py
+
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import UsuarioViewSet, login_usuario  # <--- aqui é login_usuario
+from .views import UsuarioViewSet
 
 router = DefaultRouter()
-router.register(r'usuarios', UsuarioViewSet, basename='usuario')
+# Define o prefixo do CRUD como 'usuarios'
+router.register(r'usuarios', UsuarioViewSet, basename='usuario') 
 
 urlpatterns = [
-    path('api/login/', login_usuario),  # <--- use login_usuario
-    path('api/', include(router.urls)),
+    # Inclui apenas o CRUD do ViewSet
+    path('', include(router.urls)), 
 ]

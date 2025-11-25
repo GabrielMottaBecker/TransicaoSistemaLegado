@@ -1,31 +1,19 @@
-"""
-URL configuration for SistemaVendas project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-from django.contrib import admin
-from django.urls import path, include
+# backend/urls.py (Versão para Teste de Isolamento)
 
 from django.contrib import admin
 from django.urls import path, include
+# Não se preocupe com este import por enquanto: from funcionarios.views import login_usuario
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('funcionarios.urls')),
-    path('api/fornecedores/', include('fornecedores.urls')),
-    path('api/clientes/', include('clientes.urls')),
-    path('api/', include('produtos.urls')),  # ✅ corrigido aqui
-    path('api/vendas/', include('vendas.urls')),
-    path("api/reports/", include("reports.urls")),
+    
+    # Comente TODAS as rotas de API para iniciar
+     path('api/', include('funcionarios.login_urls')), 
+     path('api/', include('funcionarios.urls')), 
+     path('api/fornecedores/', include('fornecedores.urls')),
+     path('api/clientes/', include('clientes.urls')),
+     path('api/produtos/', include('produtos.urls')),
+     path('api/vendas/', include('vendas.urls')),
+     path("api/reports/", include("reports.urls")), 
+    # path('api/login/', login_usuario, name='login-api'), # Comente também o login direto
 ]

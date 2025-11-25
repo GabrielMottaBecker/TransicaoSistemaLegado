@@ -1,21 +1,31 @@
 import { useState } from "react";
+// Adicione 'useEffect' e 'useParams' se for usar o hook de estado inicial
 import { Home, Users, Briefcase, ShoppingCart, Package, DollarSign, Activity, LogOut, Menu, Search, Plus, X, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from '../../widgets/side_bar.tsx';
+import Sidebar from '../../widgets/side_bar.tsx'; 
 
+const API_BASE_URL = "http://127.0.0.1:8000";
 
-// Para usar no seu projeto React, adicione este import:
-// import { useNavigate } from "react-router-dom";
+// Interface simplificada para um item do carrinho
+interface CarrinhoItem {
+    id: number;
+    codigo: string;
+    produto: string;
+    qtd: number;
+    preco: number;
+    subtotal: number;
+}
 
 export default function PDVSalesFlow() {
-  // No seu projeto, descomente esta linha:
-  // const navigate = useNavigate();
   const navigate = useNavigate();
   const [usuarioLogado] = useState<string>("Admin");
   const [nivelAcesso] = useState<string>("admin");
-
+  
+  // Estados para Cliente e Produto
   const [cpf, setCpf] = useState("");
   const [nomeCliente, setNomeCliente] = useState("");
+  const [clienteId, setClienteId] = useState<number | null>(null); // ID do Cliente real
+  const [produtoLookup, setProdutoLookup] = useState<any>({}); // Mapeia código -> {id, preco}
   const [data] = useState(new Date().toLocaleDateString("pt-BR"));
   
   const [codigoProduto, setCodigoProduto] = useState("");
@@ -23,7 +33,8 @@ export default function PDVSalesFlow() {
   const [preco, setPreco] = useState("");
   const [quantidade, setQuantidade] = useState("");
   
-  const [carrinho, setCarrinho] = useState<any[]>([]);
+  // Estados para Venda e Pagamento
+  const [carrinho, setCarrinho] = useState<CarrinhoItem[]>([]);
   const [totalVenda, setTotalVenda] = useState(0);
   const [showConfirmCancel, setShowConfirmCancel] = useState(false);
   const [showPagamento, setShowPagamento] = useState(false);
@@ -34,41 +45,92 @@ export default function PDVSalesFlow() {
   const [troco, setTroco] = useState("0");
   const [obs, setObs] = useState("");
 
-  const pesquisarCliente = () => {
-    if (cpf === "123.456.789-00") {
-      setNomeCliente("João da Silva");
-    } else {
-      alert("Cliente não encontrado");
-      setNomeCliente("");
-    }
-  };
-  
+// --- FUNÇÕES DE INTEGRAÇÃO REAL (API) ---
 
-  const pesquisarProduto = () => {
-    if (codigoProduto === "001") {
-      setNomeProduto("Notebook Dell Inspiron");
-      setPreco("2800.00");
-    } else if (codigoProduto === "002") {
-      setNomeProduto("Mouse Logitech");
-      setPreco("89.90");
-    } else {
-      alert("Produto não encontrado");
-      setNomeProduto("");
-      setPreco("");
+const pesquisarCliente = async () => {
+    if (!cpf) {
+        alert("Digite o CPF do cliente.");
+        return;
     }
-  };
+    try {
+        // Assume que a API de Clientes tem um endpoint customizado ou usa filtro por query param:
+        const response = await fetch(`${API_BASE_URL}/api/clientes/?cpf=${cpf}`); 
+        
+        if (!response.ok) throw new Error("Falha na API de Clientes.");
+        
+        const data = await response.json();
 
-  const adicionarItem = () => {
+        // Tenta encontrar o cliente na resposta (assumindo que a API retorna uma lista ou objeto)
+        const clienteEncontrado = data.length > 0 ? data[0] : null; 
+
+        if (clienteEncontrado) {
+            setClienteId(clienteEncontrado.id);
+            setNomeCliente(clienteEncontrado.nome);
+        } else {
+            alert("Cliente não encontrado. Certifique-se de que está cadastrado.");
+            setClienteId(null);
+            setNomeCliente("");
+        }
+    } catch (error) {
+        console.error("Erro na busca de cliente:", error);
+        alert("Erro de conexão ao buscar cliente.");
+    }
+};
+
+const pesquisarProduto = async () => {
+    if (!codigoProduto) return;
+    
+    try {
+        // Assume que a API de Produtos usa filtro por código de barras:
+        const response = await fetch(`${API_BASE_URL}/api/produtos/?codigo_barras=${codigoProduto}`);
+        
+        if (!response.ok) throw new Error("Falha na API de Produtos.");
+        
+        const data = await response.json();
+        
+        const produtoEncontrado = data.length > 0 ? data[0] : null;
+if (produtoEncontrado) {
+            
+            const novoItem = { id: produtoEncontrado.id, preco: produtoEncontrado.preco };
+            
+            setProdutoLookup(prev => {
+                const novoLookup = Object.assign({}, prev);
+                novoLookup[codigoProduto] = novoItem;
+                return novoLookup;
+            });
+            
+            setNomeProduto(produtoEncontrado.descricao);
+        } else {
+            alert("Produto não encontrado.");
+            setNomeProduto("");
+            setPreco("");
+        }
+    } catch (error) {
+        console.error("Erro na busca de produto:", error);
+    }
+};
+
+// --- FUNÇÕES DO CARRINHO E VENDA ---
+
+const adicionarItem = () => {
+    // 🚨 A lógica de adição agora verifica se o produto foi buscado com sucesso
     if (!codigoProduto || !nomeProduto || !preco || !quantidade) {
       alert("Preencha todos os campos do produto");
       return;
+    }
+    
+    const produtoInfo = produtoLookup[codigoProduto];
+    if (!produtoInfo) {
+        alert("Produto deve ser buscado e encontrado (ID/Preço real) primeiro.");
+        return;
     }
 
     const qtd = parseFloat(quantidade);
     const precoUnit = parseFloat(preco);
     const subtotal = qtd * precoUnit;
 
-    const novoItem = {
+    const novoItem: CarrinhoItem = {
+      id: produtoInfo.id, // 🚨 ESSENCIAL: ID do Django
       codigo: codigoProduto,
       produto: nomeProduto,
       qtd: qtd,
@@ -86,79 +148,123 @@ export default function PDVSalesFlow() {
     setNomeProduto("");
     setPreco("");
     setQuantidade("");
-  };
+};
 
-  const removerItem = (index: number) => {
+const removerItem = (index: number) => {
     const novoCarrinho = carrinho.filter((_, i) => i !== index);
     setCarrinho(novoCarrinho);
     const novoTotal = novoCarrinho.reduce((acc, item) => acc + item.subtotal, 0);
     setTotalVenda(novoTotal);
-  };
+};
 
-  const cancelarVenda = () => {
+const cancelarVenda = () => {
     setShowConfirmCancel(true);
-  };
+};
 
-  const confirmarCancelamento = () => {
+const confirmarCancelamento = () => {
     setCarrinho([]);
     setTotalVenda(0);
     setCpf("");
     setNomeCliente("");
+    setClienteId(null); // Limpa o ID do cliente
     setCodigoProduto("");
     setNomeProduto("");
     setPreco("");
     setQuantidade("");
+    setProdutoLookup({}); // Limpa o cache de lookup
     setShowConfirmCancel(false);
-  };
+};
 
-  const finalizarPagamento = () => {
+const finalizarPagamento = () => {
     if (carrinho.length === 0) {
-      alert("Adicione produtos ao carrinho");
-      return;
+        alert("Adicione produtos ao carrinho");
+        return;
     }
-    if (!cpf || !nomeCliente) {
-      alert("Informe os dados do cliente");
-      return;
+    // 🚨 Verifica se o ID do cliente foi capturado
+    if (!clienteId) { 
+        alert("Informe ou pesquise o cliente válido.");
+        return;
     }
     setShowPagamento(true);
-  };
+};
 
-  const calcularTroco = () => {
+const calcularTroco = () => {
     const totalPago = parseFloat(dinheiro || "0") + parseFloat(cartao || "0") + parseFloat(cheque || "0");
     const trocoCalculado = totalPago - totalVenda;
     setTroco(trocoCalculado.toFixed(2));
-  };
+};
 
-  const finalizarVenda = () => {
+const finalizarVenda = async () => {
     const totalPago = parseFloat(dinheiro || "0") + parseFloat(cartao || "0") + parseFloat(cheque || "0");
     
     if (totalPago < totalVenda) {
-      alert("O valor pago é menor que o total da venda!");
-      return;
+        alert("O valor pago é menor que o total da venda!");
+        return;
     }
     
-    alert(`Venda finalizada com sucesso!\nTotal: R$ ${totalVenda.toFixed(2)}\nTroco: R$ ${troco}`);
-    setShowPagamento(false);
-    confirmarCancelamento();
-  };
+    if (carrinho.length === 0) {
+        alert("Carrinho vazio!");
+        return;
+    }
+    
+    // 1. Mapear o Carrinho para o Payload da API de Vendas
+    const itensPayload = carrinho.map(item => ({
+        produto: item.id, // O ID do produto real do Django
+        quantidade: item.qtd,
+        preco_unitario: item.preco,
+        desconto_percentual: 0.00, // Ajustar se necessário
+    }));
 
-const handleLogout = () => {
-  // Remove os dados do usuário
-  localStorage.removeItem("usuarioLogado");
-  localStorage.removeItem("nivelAcesso");
+    // 2. Construir o Payload da Venda
+    const vendaPayload = {
+        cliente: clienteId,
+        vendedor: 1, // 🚨 TEMPORÁRIO: ID do usuário logado (Mudar para buscar de localStorage ou contexto)
+        obs: obs,
+        desconto_percentual: 0.00, 
+        itens: itensPayload // Lista de itens aninhados
+    };
 
-  // Garante que não há bloqueios antes de sair (ex: beforeunload)
-  window.onbeforeunload = null;
+    try {
+        const url = `${API_BASE_URL}/api/vendas/`;
+        
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(vendaPayload),
+        });
+        
+        if (!res.ok) {
+            const errorData = await res.json();
+            console.error("Erro da API:", errorData);
+            // Mensagem de erro mais útil vinda do backend (ex: falta de estoque ou validação)
+            alert(`Falha ao registrar a venda: ${errorData.error || errorData.detail || 'Verifique o console.'}`);
+            return;
+        }
 
-  // Redireciona para a tela de login
-  navigate("/");
+        // 3. Sucesso e Limpeza
+        const vendaFinalizada = await res.json();
+        alert(`Venda ID ${vendaFinalizada.id} finalizada com sucesso!\nTotal: R$ ${vendaFinalizada.total_venda}\nTroco: R$ ${troco}`);
+        
+        setShowPagamento(false);
+        confirmarCancelamento();
+        
+    } catch (error) {
+        console.error("Erro de rede:", error);
+        alert("Erro de rede ao finalizar a venda. Servidor pode estar inacessível.");
+    }
 };
 
-  const navegarPara = (rota: string) => {
-    // No seu projeto, use:
-    // navigate(rota);
+
+const handleLogout = () => {
+    localStorage.removeItem("usuarioLogado");
+    localStorage.removeItem("nivelAcesso");
+    window.onbeforeunload = null;
+    navigate("/");
+};
+
+const navegarPara = (rota: string) => {
     alert(`Navegando para: ${rota}`);
-  };
+};
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
