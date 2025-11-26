@@ -1,29 +1,6 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom"; 
-import { X, Loader2, AlertCircle, ShoppingCart, Edit, Plus, Activity, Home, Users, Briefcase, Package, DollarSign, Menu, LogOut } from "lucide-react";
-
-/**
- * Interface que define a estrutura de um Produto.
- */
-interface Produto {
-  id: number | null;
-  descricao: string;
-  preco: string;
-  quantidade_estoque: string;
-  desconto_percentual: string;
-  codigo_barras: string;
-  ativo: boolean; 
-}
-
-const initialProdutoState: Produto = {
-    id: null,
-    descricao: "",
-    preco: "0.00",
-    quantidade_estoque: "0",
-    desconto_percentual: "0.00",
-    codigo_barras: "",
-    ativo: true,
-};
+import { X, Loader2, AlertCircle, ShoppingCart, Edit, Plus } from "lucide-react";
 
 // --- Componentes Auxiliares (Modal de Sucesso) ---
 interface SavedModalProps {
@@ -31,6 +8,11 @@ interface SavedModalProps {
     message: string;
     onClose: () => void;
 }
+
+const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
+const modalContentStyle: React.CSSProperties = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '100%', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' };
+const closeButtonStyle: React.CSSProperties = { border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' };
+const modalPrimaryButtonStyle: React.CSSProperties = { backgroundColor: '#1e88e5', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 500, cursor: 'pointer', transition: 'background-color 0.2s' };
 
 const SavedModal: React.FC<SavedModalProps> = ({ isOpen, message, onClose }) => {
     if (!isOpen) return null;
@@ -57,6 +39,28 @@ const SavedModal: React.FC<SavedModalProps> = ({ isOpen, message, onClose }) => 
     );
 };
 
+/**
+ * Interface que define a estrutura de um Produto.
+ */
+interface Produto {
+  id: number | null;
+  descricao: string;
+  preco: string;
+  quantidade_estoque: string;
+  desconto_percentual: string;
+  codigo_barras: string;
+  ativo: boolean; 
+}
+
+const initialProdutoState: Produto = {
+    id: null,
+    descricao: "",
+    preco: "0.00",
+    quantidade_estoque: "0",
+    desconto_percentual: "0.00",
+    codigo_barras: "",
+    ativo: true,
+};
 
 // --- Componente Principal de Cadastro/Edição de Produto ---
 
@@ -69,16 +73,16 @@ export default function CadastrarProduto() {
     const [loading, setLoading] = useState(false);
     const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
     
-    const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin"); 
-    const [nivelAcesso, setNivelAcesso] = useState<string>("admin"); 
-
+    // Função auxiliar para converter "0,09" em 0.09
+    const parseCurrency = (value: string) => {
+        if (!value) return 0.00;
+        // Troca vírgula por ponto e remove caracteres não numéricos (exceto ponto)
+        const normalized = value.replace(',', '.');
+        const number = parseFloat(normalized);
+        return isNaN(number) ? 0.00 : number;
+    };
 
     useEffect(() => {
-        const user = localStorage.getItem("usuarioLogado");
-        const nivel = localStorage.getItem("nivelAcesso");
-        if (user) setUsuarioLogado(user);
-        if (nivel) setNivelAcesso(nivel);
-
         if (isEditMode) {
             carregarProdutoParaEdicao(Number(id));
         }
@@ -96,11 +100,11 @@ export default function CadastrarProduto() {
             setProduto({
                 ...initialProdutoState,
                 id: data.id,
-                descricao: data.descricao,
-                preco: String(data.preco),
-                quantidade_estoque: String(data.quantidade_estoque),
-                desconto_percentual: String(data.desconto_percentual),
-                codigo_barras: data.codigo_barras || '',
+                descricao: data.descricao || "",
+                preco: String(data.preco || "0.00"),
+                quantidade_estoque: String(data.quantidade_estoque || "0"),
+                desconto_percentual: String(data.desconto_percentual || "0.00"),
+                codigo_barras: data.codigo_barras || "",
                 ativo: data.ativo,
             });
 
@@ -128,15 +132,18 @@ export default function CadastrarProduto() {
         e.preventDefault();
         setLoading(true);
 
+        // ⚠️ CORREÇÃO AQUI: Usando parseCurrency para tratar vírgulas
         const produtoPayload = {
             descricao: produto.descricao,
-            preco: parseFloat(produto.preco) || 0.00,
+            preco: parseCurrency(produto.preco),
             quantidade_estoque: parseInt(produto.quantidade_estoque, 10) || 0,
-            desconto_percentual: parseFloat(produto.desconto_percentual) || 0.00,
+            desconto_percentual: parseCurrency(produto.desconto_percentual),
             codigo_barras: produto.codigo_barras || null,
             ativo: produto.ativo,
         };
         
+        console.log("Enviando Payload:", produtoPayload); // Debug no console do navegador
+
         try {
             const url = isEditMode && produto.id 
                 ? `http://127.0.0.1:8000/api/produtos/${produto.id}/` 
@@ -153,8 +160,15 @@ export default function CadastrarProduto() {
             if (!res.ok) {
                 const errorData = await res.json();
                 console.error("Erro da API:", errorData);
-                if (errorData.codigo_barras) alert(`Erro: Código de Barras já existe ou é inválido.`);
-                else alert(`Falha na operação: ${isEditMode ? "Atualização" : "Cadastro"}. Verifique o console.`);
+                
+                // Mostra o erro específico retornado pelo Django
+                let errorMsg = "Falha na operação.";
+                if (errorData.codigo_barras) errorMsg = "Código de Barras inválido ou já existente.";
+                else if (errorData.descricao) errorMsg = `Erro na descrição: ${errorData.descricao}`;
+                else if (errorData.preco) errorMsg = `Erro no preço: ${errorData.preco}`;
+                else errorMsg = `Erro: ${JSON.stringify(errorData)}`;
+
+                alert(errorMsg);
                 setLoading(false);
                 return;
             }
@@ -164,7 +178,7 @@ export default function CadastrarProduto() {
 
         } catch (error) {
             console.error("Erro de rede:", error);
-            alert("Erro de rede. Tente novamente.");
+            alert("Erro de rede. Verifique se o servidor Django está rodando.");
             setLoading(false);
         }
     };
@@ -175,11 +189,8 @@ export default function CadastrarProduto() {
 
     return (
         <div style={pageContainerStyle}>
-            {/* A Sidebar foi removida daqui, seguindo o padrão das telas de Cadastro de Cliente/Usuário */}
-            
-            {/* Conteúdo Principal */}
             <main style={mainContentStyle}>
-                {/* Header (Topo da página) */}
+                {/* Header */}
                 <header style={headerStyle}>
                     <div style={{ flex: 1 }}>
                         <h1 style={{ fontSize: "24px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>
@@ -190,7 +201,6 @@ export default function CadastrarProduto() {
                         </p>
                     </div>
 
-                    {/* Botão Voltar para Lista no canto direito */}
                     <button onClick={() => navigate("/produtos")} style={backButtonStyle}>
                         Voltar para Lista
                     </button>
@@ -200,23 +210,17 @@ export default function CadastrarProduto() {
                     <div style={formCardStyle}>
                         <form onSubmit={handleSubmit}>
                             
-                            {/* ## Detalhes do Produto */}
                             <h3 style={sectionTitleStyle}><ShoppingCart size={20} /> Detalhes do Produto</h3>
                             
-                            {/* Layout em Duas Colunas (grid-template-columns: repeat(2, 1fr)) */}
                             <div style={twoColumnGridStyle}>
-                                
-                                {/* Coluna 1: Descrição e Código */}
+                                {/* Coluna 1 */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                    
-                                    {/* 1. Descrição */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="descricao" style={labelStyle}>Descrição:</label>
                                         <input id="descricao" type="text" name="descricao" value={produto.descricao} onChange={handleChange} placeholder="Nome completo do produto" style={inputStyle} required />
                                         <small style={hintStyle}>Nome de exibição e identificação do produto.</small>
                                     </div>
                                     
-                                    {/* 2. Código de Barras */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="codigo_barras" style={labelStyle}>Código de Barras:</label>
                                         <input id="codigo_barras" type="text" name="codigo_barras" value={produto.codigo_barras} onChange={handleChange} placeholder="SKU, EAN ou Código Interno" style={inputStyle} />
@@ -224,33 +228,26 @@ export default function CadastrarProduto() {
                                     </div>
                                 </div>
                                 
-                                {/* Coluna 2: Preço, Estoque, Desconto */}
+                                {/* Coluna 2 */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                    
-                                    {/* 3. Preço */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="preco" style={labelStyle}>Preço:</label>
                                         <input id="preco" type="number" name="preco" value={produto.preco} onChange={handleChange} placeholder="0.00" step="0.01" style={inputStyle} required />
-                                        <small style={hintStyle}>Preço de venda base unitário do produto (R$).</small>
+                                        <small style={hintStyle}>Preço de venda (Use ponto ou vírgula).</small>
                                     </div>
                                     
-                                    {/* 4. Quantidade em Estoque */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="quantidade_estoque" style={labelStyle}>Quantidade em Estoque:</label>
                                         <input id="quantidade_estoque" type="number" name="quantidade_estoque" value={produto.quantidade_estoque} onChange={handleChange} placeholder="0" style={inputStyle} required />
-                                        <small style={hintStyle}>Quantidade atual em seu inventário físico.</small>
                                     </div>
                                     
-                                    {/* 5. Desconto (%) */}
                                     <div style={{ flexGrow: 1 }}>
                                         <label htmlFor="desconto_percentual" style={labelStyle}>Desconto (%):</label>
                                         <input id="desconto_percentual" type="number" name="desconto_percentual" value={produto.desconto_percentual} onChange={handleChange} placeholder="0.00" step="0.01" style={inputStyle} />
-                                        <small style={hintStyle}>Percentual máximo de desconto permitido.</small>
                                     </div>
                                 </div>
                                 
-                                
-                                {/* 6. Ativo (Checkbox) */}
+                                {/* Checkbox Ativo */}
                                 <div style={{ gridColumn: 'span 2', paddingTop: '10px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <input 
@@ -265,7 +262,6 @@ export default function CadastrarProduto() {
                                 </div>
                             </div>
                             
-                            {/* Botão de Submissão */}
                             <div style={{ marginTop: "30px" }}>
                                 <button
                                     type="submit"
@@ -286,18 +282,14 @@ export default function CadastrarProduto() {
                 message={isEditMode ? "O produto foi atualizado com sucesso." : "O novo produto foi adicionado com sucesso ao estoque."}
                 onClose={() => {
                     setIsSavedModalOpen(false);
-                    navigate("/produtos"); // Volta para a lista
+                    navigate("/produtos");
                 }}
             />
         </div>
     );
 }
 
-// --- ESTILOS CSS (Padrão CLARO - Unificado) ---
-const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
-const modalContentStyle: React.CSSProperties = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '100%', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' };
-const closeButtonStyle: React.CSSProperties = { border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' };
-const modalPrimaryButtonStyle: React.CSSProperties = { backgroundColor: '#1e88e5', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 500, cursor: 'pointer', transition: 'background-color 0.2s' };
+// --- ESTILOS CSS ---
 const pageContainerStyle: React.CSSProperties = { display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" };
 const mainContentStyle: React.CSSProperties = { flex: 1, display: "flex", flexDirection: "column" };
 const headerStyle: React.CSSProperties = { backgroundColor: "#fff", padding: "20px 50px", borderBottom: "1px solid #e0e0e0", display: "flex", justifyContent: "space-between", alignItems: "center" };
@@ -312,26 +304,4 @@ const hintStyle: React.CSSProperties = { fontSize: '11px', color: '#94a3b8', mar
 const submitButtonStyle: React.CSSProperties = { width: "100%", padding: "14px", backgroundColor: "#10b981", color: "#fff", border: "none", borderRadius: "8px", fontSize: "18px", fontWeight: 600, cursor: "pointer", transition: "background-color 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" };
 const spinIconStyle: React.CSSProperties = { animation: "spin 1s linear infinite" };
 const checkboxStyle: React.CSSProperties = { width: '18px', height: '18px' };
-// Estilos da Sidebar (removidos, mas mantemos as variáveis para evitar ReferenceErrors nos outros arquivos que você não me enviou)
-const sidebarStyle: React.CSSProperties = { width: "240px", backgroundColor: "#fff", borderRight: "1px solid #e0e0e0", display: "flex", flexDirection: "column", padding: "20px 0" };
-const logoContainerStyle: React.CSSProperties = { padding: "0 20px 30px", borderBottom: "1px solid #e0e0e0" };
-const logoTextStyle: React.CSSProperties = { color: "#1e88e5", fontSize: "20px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px", margin: 0 };
-const subLogoTextStyle: React.CSSProperties = { fontSize: "11px", color: "#999", marginTop: "2px" };
-const menuSectionTitleStyle: React.CSSProperties = { fontSize: "11px", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", padding: "0 15px", marginBottom: "15px", marginTop: "20px" };
-const menuItemStyle: React.CSSProperties = { 
-  display: "flex", 
-  alignItems: "center", 
-  gap: "12px", 
-  padding: "12px 20px", 
-  textDecoration: "none", 
-  fontSize: "14px", 
-  fontWeight: 500, 
-  transition: "all 0.2s", 
-  cursor: "pointer", 
-  border: "none", 
-  width: "100%", 
-  textAlign: "left", 
-  backgroundColor: "transparent", 
-  color: "#475569" 
-}; 
 const loadingContainerStyle: React.CSSProperties = { minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' };

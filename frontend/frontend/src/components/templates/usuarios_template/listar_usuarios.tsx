@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, Search, Plus, Edit, Trash2, Mail, Phone, LogOut, Home, Users, Briefcase, Package, ShoppingCart, DollarSign, Menu } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Mail, Phone } from "lucide-react";
 import Sidebar from '../../widgets/side_bar.tsx';
+
 interface Funcionario {
   id: number;
   nome: string;
@@ -31,32 +32,45 @@ export default function ListarFuncionarios() {
     try {
       const response = await fetch("http://127.0.0.1:8000/api/usuarios/");
 
+      // 1. Verifica se a resposta da API foi bem-sucedida (status 200-299)
+      if (!response.ok) {
+        throw new Error(`Erro na API: ${response.status}`);
+      }
+
       const data = await response.json();
-      setFuncionarios(data);
+
+      // 2. Verifica se os dados recebidos são realmente uma lista (Array)
+      if (Array.isArray(data)) {
+        setFuncionarios(data);
+      } 
+      // 3. Suporte para caso a API use paginação (retorna objeto com chave 'results')
+      else if (data.results && Array.isArray(data.results)) {
+        setFuncionarios(data.results);
+      } 
+      else {
+        console.error("Formato de dados inválido recebido:", data);
+        setFuncionarios([]); // Previne a tela branca definindo uma lista vazia
+      }
+
     } catch (error) {
       console.error("Erro ao carregar funcionários:", error);
-      // Dados de exemplo para demonstração
-      setFuncionarios([
-        {
-          id: 1,
-          nome: "Maria Santos",
-          cpf: "123.456.789-00",
-          cargo: "Gerente de Vendas",
-          nivel: "Administrador",
-          email: "maria@example.com",
-          celular: "(11) 98765-4321"
-        }
-      ]);
+      // Garante que seja sempre um array, mesmo se der erro de conexão
+      setFuncionarios([]); 
     }
   };
 
   const handleDelete = async (id: number) => {
     if (window.confirm("Tem certeza que deseja excluir este funcionário?")) {
       try {
-        await fetch(`http://127.0.0.1:8000/api/usuarios/${id}/`, { method: "DELETE" });
+        const response = await fetch(`http://127.0.0.1:8000/api/usuarios/${id}/`, { method: "DELETE" });
+        
+        if (!response.ok) {
+            throw new Error("Falha ao excluir");
+        }
         carregarFuncionarios();
       } catch (error) {
         console.error("Erro ao excluir funcionário:", error);
+        alert("Não foi possível excluir o funcionário.");
       }
     }
   };
@@ -67,23 +81,21 @@ export default function ListarFuncionarios() {
     navigate("/");
   };
 
+  // Filtro seguro (agora garantimos que 'funcionarios' é sempre um array)
   const funcionariosFiltrados = funcionarios.filter(func =>
-    func.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    func.cpf.includes(searchTerm) ||
-    func.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    func.cargo.toLowerCase().includes(searchTerm.toLowerCase())
+    (func.nome?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (func.cpf || "").includes(searchTerm) ||
+    (func.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (func.cargo?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-    <Sidebar
-      usuarioLogado={usuarioLogado}
-      nivelAcesso={nivelAcesso}
-      onLogout={handleLogout}
-    />
-
-
-
+      <Sidebar
+        usuarioLogado={usuarioLogado}
+        nivelAcesso={nivelAcesso}
+        onLogout={handleLogout}
+      />
 
       {/* 🏠 Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -259,7 +271,7 @@ export default function ListarFuncionarios() {
                               fontWeight: 600,
                               fontSize: "14px"
                             }}>
-                              {func.nome.charAt(0).toUpperCase()}
+                              {func.nome ? func.nome.charAt(0).toUpperCase() : "?"}
                             </div>
                             <span style={{ fontWeight: 500 }}>{func.nome}</span>
                           </div>
@@ -340,21 +352,6 @@ export default function ListarFuncionarios() {
     </div>
   );
 }
-
-const menuItemStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "12px",
-  padding: "12px 20px",
-  textDecoration: "none",
-  fontSize: "14px",
-  fontWeight: 500,
-  transition: "all 0.2s",
-  cursor: "pointer",
-  border: "none",
-  width: "100%",
-  textAlign: "left"
-};
 
 const tableHeaderStyle: React.CSSProperties = {
   padding: "16px 20px",

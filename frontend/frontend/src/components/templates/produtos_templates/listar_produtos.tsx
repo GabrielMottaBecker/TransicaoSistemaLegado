@@ -34,8 +34,10 @@ export default function ListarProdutos() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
-  const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin");
-  const [nivelAcesso, setNivelAcesso] = useState<string>("admin");
+  
+  // 🟢 CORREÇÃO: Lê do localStorage na inicialização
+  const [usuarioLogado, setUsuarioLogado] = useState<string>(() => localStorage.getItem("usuarioLogado") || "Usuário");
+  const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
 
   const navigate = useNavigate();
 
@@ -52,15 +54,27 @@ export default function ListarProdutos() {
     setLoading(true);
     try {
       const response = await fetch("http://127.0.0.1:8000/api/produtos/");
-      if (!response.ok) throw new Error(`Erro ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro na API: ${response.status}`);
+      }
       
       const data = await response.json();
-      const lista = Array.isArray(data) ? data : data.results || data.data || [];
+      
+      let lista: Produto[] = [];
+      if (Array.isArray(data)) {
+        lista = data;
+      } else if (data.results && Array.isArray(data.results)) {
+        lista = data.results;
+      } else if (data.data && Array.isArray(data.data)) {
+        lista = data.data;
+      }
+
       setProdutos(lista);
+
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
-      alert("Erro ao conectar com o servidor Django.");
-      setProdutos([]);
+      setProdutos([]); 
     } finally {
       setLoading(false);
     }
@@ -72,31 +86,39 @@ export default function ListarProdutos() {
         const response = await fetch(`http://127.0.0.1:8000/api/produtos/${id}/`, {
           method: "DELETE",
         });
+        
         if (!response.ok) throw new Error("Erro ao excluir");
+        
         carregarProdutos();
       } catch (error) {
         console.error(error);
-        alert("Erro ao excluir produto.");
+        alert("Erro ao excluir produto. Verifique se ele está vinculado a uma venda.");
       }
     }
   };
 
   const handleNovoProduto = () => navigate("/cadastrar_produto");
   const handleEditarProduto = (id: number) => navigate(`/editar_produto/${id}`);
+  
   const handleLogout = () => {
     localStorage.removeItem("usuarioLogado");
     localStorage.removeItem("nivelAcesso");
     navigate("/");
   };
 
-  const produtosFiltrados = produtos.filter(
-    (p) =>
-      p.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.codigo_barras && p.codigo_barras.includes(searchTerm))
-  );
+  const produtosFiltrados = produtos.filter((p) => {
+      const desc = p.descricao ? p.descricao.toLowerCase() : "";
+      const cod = p.codigo_barras ? p.codigo_barras.toLowerCase() : "";
+      const term = searchTerm.toLowerCase();
+      
+      return desc.includes(term) || cod.includes(term);
+  });
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  const formatCurrency = (v: number | string | null) => {
+    if (v === null || v === undefined || v === "") return "R$ 0,00";
+    const num = typeof v === 'string' ? parseFloat(v) : v;
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(num);
+  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom"; 
-import { X, Loader2, AlertCircle, Plus, Edit, User, Briefcase, MapPin, Mail, Lock } from "lucide-react";
+import { X, Loader2, AlertCircle, Plus, Edit, User, MapPin, Lock } from "lucide-react";
 
 /**
  * Interface que define a estrutura do Funcionário/Usuário.
@@ -176,14 +176,15 @@ export default function CadastrarUsuarios() {
             nome: funcionario.nome,
             email: funcionario.email,
             cargo: funcionario.cargo,
-            nivel: funcionario.nivel_acesso,
+            nivel_acesso: funcionario.nivel_acesso,
             senha: funcionario.senha,
             cpf: funcionario.cpf,
             rg: funcionario.rg,
             
             // Contatos
             celular: funcionario.celular,
-            telefone: funcionario.telefone_fixo, 
+            telefone: funcionario.telefone,
+            telefone_fixo: funcionario.telefone_fixo,
             
             // Endereço
             cep: funcionario.cep,
@@ -211,7 +212,7 @@ export default function CadastrarUsuarios() {
             if (!res.ok) {
                 const errorData = await res.json();
                 console.error("Erro da API:", errorData);
-                alert(`Falha na operação: ${isEditMode ? "Atualização" : "Cadastro"}. Verifique o console.`);
+                alert(`Falha na operação: ${isEditMode ? "Atualização" : "Cadastro"}. Erro: ${JSON.stringify(errorData)}`);
 
                 setLoading(false);
                 return;
@@ -237,8 +238,6 @@ export default function CadastrarUsuarios() {
 
     return (
         <div style={pageContainerStyle}>
-            {/* O Sidebar (não incluído, mas faria parte do layout do dashboard) */}
-            
             <main style={mainContentStyle}>
                 {/* Header (Topo da página) */}
                 <header style={headerStyle}>
@@ -263,31 +262,14 @@ export default function CadastrarUsuarios() {
                             {/* Seção 1: Dados Pessoais e Contato */}
                             <h3 style={sectionTitleStyle}><User size={20} /> Dados Pessoais e Contato</h3>
                             <div style={gridContainerStyle}>
-                                {/* Nome */}
                                 <input type="text" name="nome" value={funcionario.nome} onChange={handleChange} placeholder="Nome" style={inputStyle} required />
-                                
-                                {/* Email */}
                                 <input type="email" name="email" value={funcionario.email} onChange={handleChange} placeholder="Email" style={inputStyle} required />
-
-                                {/* Celular */}
                                 <input type="text" name="celular" value={funcionario.celular} onChange={handleChange} placeholder="Celular" style={inputStyle} required />
-                                
-                                {/* Telefone */}
                                 <input type="text" name="telefone" value={funcionario.telefone} onChange={handleChange} placeholder="Telefone" style={inputStyle} />
-                                
-                                {/* Telefone Fixo */}
                                 <input type="text" name="telefone_fixo" value={funcionario.telefone_fixo} onChange={handleChange} placeholder="Telefone Fixo" style={inputStyle} />
-                                
-                                {/* RG */}
-                                <input type="text" name="rg" value={funcionario.rg} onChange={handleChange} placeholder="RG" style={inputStyle} />
-                                
-                                {/* CPF */}
+                                <input type="text" name="rg" value={funcionario.rg} onChange={handleChange} placeholder="RG" style={inputStyle} required />
                                 <input type="text" name="cpf" value={funcionario.cpf} onChange={handleChange} placeholder="CPF" style={inputStyle} required />
-                                
-                                {/* Cargo */}
                                 <input type="text" name="cargo" value={funcionario.cargo} onChange={handleChange} placeholder="Cargo" style={inputStyle} required />
-                                
-                                {/* Espaço Vazio */}
                                 <div />
                             </div>
 
@@ -295,7 +277,6 @@ export default function CadastrarUsuarios() {
                             <h3 style={{ ...sectionTitleStyle, marginTop: "30px" }}><MapPin size={20} /> Endereço</h3>
                             
                             <div style={gridContainerSmallStyle}> 
-                                {/* CEP */}
                                 <div style={{ position: 'relative' }}>
                                     <input 
                                         type="text" name="cep" value={funcionario.cep} onChange={handleChange} 
@@ -307,21 +288,14 @@ export default function CadastrarUsuarios() {
                                     </button>
                                 </div>
                                 
-                                {/* Endereco */}
                                 <input type="text" name="endereco" value={funcionario.endereco} onChange={handleChange} placeholder="Endereço (Rua/Avenida)" style={inputStyle} required />
-                                
-                                {/* Número da Casa */}
                                 <input type="text" name="numero_casa" value={funcionario.numero_casa} onChange={handleChange} placeholder="Número" style={inputStyle} required />
                             </div>
                             
                             <div style={gridContainerStyle}>
-                                {/* Bairro */}
                                 <input type="text" name="bairro" value={funcionario.bairro} onChange={handleChange} placeholder="Bairro" style={inputStyle} required />
-                                
-                                {/* Cidade */}
                                 <input type="text" name="cidade" value={funcionario.cidade} onChange={handleChange} placeholder="Cidade" style={inputStyle} required />
                                 
-                                {/* UF */}
                                 <select name="uf" value={funcionario.uf} onChange={handleChange} style={inputStyle} required>
                                     <option value="">UF</option>
                                     {["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"].map(uf => (
@@ -329,24 +303,20 @@ export default function CadastrarUsuarios() {
                                     ))}
                                 </select>
                                 
-                                {/* Complemento */}
                                 <input type="text" name="complemento" value={funcionario.complemento} onChange={handleChange} placeholder="Complemento (Opcional)" style={inputStyle} />
                             </div>
                             
                             {/* Seção 3: Acesso */}
                             <h3 style={{ ...sectionTitleStyle, marginTop: "30px" }}><Lock size={20} /> Acesso</h3>
                             <div style={gridContainerStyle}>
-                                {/* Senha */}
                                 <input type="password" name="senha" value={funcionario.senha} onChange={handleChange} placeholder={isEditMode ? "Nova Senha (Opcional)" : "Senha"} style={inputStyle} required={!isEditMode} />
                                 
-                                {/* Nível de Acesso */}
-                                <select name="nivel_acesso" value={funcionario.nivel_acesso} onChange={handleChange} placeholder="Nível de Acesso" style={inputStyle} required>
+                                <select name="nivel_acesso" value={funcionario.nivel_acesso} onChange={handleChange} style={inputStyle} required>
                                     <option value="">Nível de Acesso</option>
                                     <option value="admin">Administrador</option>
                                     <option value="user">Usuário Comum</option>
                                 </select>
 
-                                {/* Espaço Vazio */}
                                 <div />
                             </div>
                             
@@ -371,14 +341,14 @@ export default function CadastrarUsuarios() {
                 message={isEditMode ? "O funcionário foi atualizado com sucesso." : "O novo funcionário foi adicionado com sucesso ao sistema."}
                 onClose={() => {
                     setIsSavedModalOpen(false);
-                    navigate("/listar_usuarios"); // Volta para a lista de funcionários
+                    navigate("/listar_usuarios");
                 }}
             />
         </div>
     );
 }
 
-// --- Estilos CSS (Reutilizados do Cliente/Fornecedor) ---
+// --- Estilos CSS ---
 const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
 const modalContentStyle: React.CSSProperties = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '100%', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' };
 const closeButtonStyle: React.CSSProperties = { border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' };
@@ -391,7 +361,7 @@ const formWrapperStyle: React.CSSProperties = { padding: "30px", flexGrow: 1 };
 const formCardStyle: React.CSSProperties = { backgroundColor: "#fff", padding: "30px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", maxWidth: "900px", margin: "0 auto" };
 const sectionTitleStyle: React.CSSProperties = { fontSize: "18px", fontWeight: 600, color: "#1e293b", borderBottom: "1px solid #e0e0e0", paddingBottom: "10px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" };
 const gridContainerStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px", marginBottom: "15px" };
-const gridContainerSmallStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "2fr 3fr 1fr", gap: "15px", marginBottom: "15px" }; // Usado para Endereço
+const gridContainerSmallStyle: React.CSSProperties = { display: "grid", gridTemplateColumns: "2fr 3fr 1fr", gap: "15px", marginBottom: "15px" };
 const inputStyle: React.CSSProperties = { padding: "12px", border: "1px solid #e2e8f0", borderRadius: "8px", width: "100%", boxSizing: "border-box", fontSize: "14px" };
 const submitButtonStyle: React.CSSProperties = { width: "100%", padding: "14px", backgroundColor: "#10b981", color: "#fff", border: "none", borderRadius: "8px", fontSize: "18px", fontWeight: 600, cursor: "pointer", transition: "background-color 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" };
 const spinIconStyle: React.CSSProperties = { animation: "spin 1s linear infinite" };

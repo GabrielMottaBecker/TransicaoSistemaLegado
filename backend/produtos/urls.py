@@ -3,7 +3,8 @@ from .views import ProdutoViewSet
 from django.urls import path, include
 
 router = routers.DefaultRouter()
-router.register(r'produtos', ProdutoViewSet)
+# 🚨 IMPORTANTE: Use r'' (vazio) porque já definimos 'api/produtos/' no arquivo principal
+router.register(r'', ProdutoViewSet, basename='produto')
 
 urlpatterns = [
     path('', include(router.urls)),

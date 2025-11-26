@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Users, Briefcase, ShoppingCart, Package, DollarSign, Activity, LogOut } from "lucide-react";
+import { Home, Users, Briefcase, ShoppingCart, Package, DollarSign, Activity, LogOut, TrendingUp } from "lucide-react";
 
 interface SidebarProps {
   usuarioLogado?: string;
@@ -15,9 +15,9 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
   const location = useLocation();
 
   useEffect(() => {
-    // Se não vier via props, busca do localStorage
+    // Pega os dados do localStorage se não vierem via props
     const user = propUsuario || localStorage.getItem("usuarioLogado") || "Usuário";
-    const nivel = propNivel || localStorage.getItem("nivelAcesso") || "comum";
+    const nivel = propNivel || localStorage.getItem("nivelAcesso") || "user"; 
 
     setUsuarioLogado(user);
     setNivelAcesso(nivel);
@@ -35,13 +35,22 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
 
   const isActive = (path: string) => location.pathname === path;
 
+  // CONFIGURAÇÃO DO MENU
+  // adminOnly: true -> Aparece SÓ para admin
+  // adminOnly: false -> Aparece para TODOS (igual sua imagem)
   const menuItems = [
-    { path: "/home", icon: Home, label: "Dashboard" },
-    { path: "/clientes", icon: Briefcase, label: "Clientes" },
-    { path: "/listar_usuarios", icon: Users, label: "Funcionários", adminOnly: true },
-    { path: "/fornecedores", icon: Package, label: "Fornecedores" },
-    { path: "/produtos", icon: ShoppingCart, label: "Produtos" },
-    { path: "/pdv", icon: DollarSign, label: "Vendas" },
+    { path: "/home", icon: Home, label: "Dashboard", adminOnly: false },
+    { path: "/clientes", icon: Briefcase, label: "Clientes", adminOnly: false },
+    
+    // ESCONDIDO DO USUÁRIO COMUM
+    { path: "/listar_usuarios", icon: Users, label: "Funcionários", adminOnly: true }, 
+    
+    { path: "/fornecedores", icon: Package, label: "Fornecedores", adminOnly: false },
+    { path: "/produtos", icon: ShoppingCart, label: "Produtos", adminOnly: false },
+    { path: "/pdv", icon: DollarSign, label: "Vendas", adminOnly: false },
+    
+    // ESCONDIDO DO USUÁRIO COMUM
+    { path: "/relatorios", icon: TrendingUp, label: "Relatórios", adminOnly: true }, 
   ];
 
   return (
@@ -54,6 +63,8 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
         flexDirection: "column",
         padding: "20px 0",
         height: "100vh",
+        position: 'sticky',
+        top: 0
       }}
     >
       {/* Cabeçalho */}
@@ -66,16 +77,17 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
             display: "flex",
             alignItems: "center",
             gap: "8px",
+            margin: 0
           }}
         >
           <Activity size={24} />
           Vendify
         </h2>
-        <p style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>Sistema de Vendas</p>
+        <p style={{ fontSize: "11px", color: "#999", marginTop: "4px", marginBottom: 0 }}>Sistema de Vendas</p>
       </div>
 
       {/* Menu */}
-      <nav style={{ flex: 1, padding: "20px 0" }}>
+      <nav style={{ flex: 1, padding: "20px 0", overflowY: "auto" }}>
         <div style={{ padding: "0 15px", marginBottom: "15px" }}>
           <p
             style={{
@@ -84,6 +96,7 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.5px",
+              margin: 0
             }}
           >
             PRINCIPAL
@@ -91,8 +104,11 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
         </div>
 
         {menuItems.map((item) => {
-          // ✅ Só mostra o item se for admin OU se não for adminOnly
-          if (item.adminOnly && nivelAcesso !== "admin") return null;
+          // Lógica de bloqueio:
+          // Se o item é SÓ para admin E o usuário NÃO é admin -> Não mostra (return null)
+          if (item.adminOnly && nivelAcesso !== "admin") {
+            return null;
+          }
 
           const Icon = item.icon;
           const active = isActive(item.path);
@@ -104,7 +120,8 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
               style={{
                 ...menuItemStyle,
                 backgroundColor: active ? "#e3f2fd" : "transparent",
-                color: active ? "#1e88e5" : "#666",
+                color: active ? "#1e88e5" : "#475569",
+                fontWeight: active ? 600 : 500
               }}
             >
               <Icon size={18} />
@@ -121,6 +138,7 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.5px",
+              margin: 0
             }}
           >
             SISTEMA
@@ -129,7 +147,7 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
 
         <button
           onClick={handleLogout}
-          style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#666" }}
+          style={{ ...menuItemStyle, backgroundColor: "transparent", color: "#475569" }}
         >
           <LogOut size={18} />
           <span>Sair</span>
@@ -146,10 +164,10 @@ const menuItemStyle: React.CSSProperties = {
   padding: "12px 20px",
   textDecoration: "none",
   fontSize: "14px",
-  fontWeight: 500,
   transition: "all 0.2s",
   cursor: "pointer",
   border: "none",
   width: "100%",
   textAlign: "left",
+  marginBottom: "4px"
 };

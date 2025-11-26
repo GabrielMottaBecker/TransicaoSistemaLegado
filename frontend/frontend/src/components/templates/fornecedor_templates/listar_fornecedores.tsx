@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Edit, Trash2, Mail, Phone, Loader2 } from "lucide-react";
-// 🚨 CORREÇÃO FINAL: Usando a importação PADRÃO (sem chaves) para ser compatível com export default no side_bar.tsx
 import Sidebar from '../../widgets/side_bar.tsx'; 
 
-// --- Interfaces ---
 interface Fornecedor {
   id: number;
-  nome: string; // Razão Social
+  nome: string; 
   cnpj: string;
   email: string;
   celular: string;
@@ -20,7 +18,6 @@ interface Fornecedor {
   uf: string;
 }
 
-// Estilos padronizados (reutilizados dos outros arquivos)
 const tableHeaderStyle: React.CSSProperties = {
   padding: "16px 20px",
   textAlign: "left",
@@ -37,19 +34,18 @@ const tableCellStyle: React.CSSProperties = {
   color: "#334155"
 };
 
-// --- Componente Principal de Listagem ---
 export default function ListarFornecedores() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
-  // Definindo estados para o usuário logado e nível de acesso
-  const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin"); 
-  const [nivelAcesso, setNivelAcesso] = useState<string>("admin"); 
+  
+  // 🟢 CORREÇÃO: Lê do localStorage na inicialização
+  const [usuarioLogado, setUsuarioLogado] = useState<string>(() => localStorage.getItem("usuarioLogado") || "Usuário");
+  const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    // RECUPERAR DADOS DO USUÁRIO LOGADO
     const user = localStorage.getItem("usuarioLogado");
     const nivel = localStorage.getItem("nivelAcesso");
     if (user) setUsuarioLogado(user);
@@ -58,7 +54,6 @@ export default function ListarFornecedores() {
     carregarFornecedores();
   }, []);
 
-  // Função de listagem REAL: GET para a API Django
   const carregarFornecedores = async () => {
     setLoading(true);
     try {
@@ -79,7 +74,6 @@ export default function ListarFornecedores() {
     }
   };
 
-  // Função de exclusão REAL: DELETE para a API Django
   const handleDelete = async (id: number) => {
     if (window.confirm("Tem certeza que deseja excluir este fornecedor? Esta ação é irreversível.")) {
         try {
@@ -118,16 +112,13 @@ export default function ListarFornecedores() {
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
       
-      {/* 1. Sidebar usando o componente importado corretamente */}
       <Sidebar
         usuarioLogado={usuarioLogado}
         nivelAcesso={nivelAcesso}
         onLogout={handleLogout}
       />
 
-      {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header (Top Bar) - Padrão dos outros componentes */}
         <header style={{
           backgroundColor: "#fff",
           padding: "20px 50px",
@@ -146,7 +137,6 @@ export default function ListarFornecedores() {
             alignItems: "center",
             gap: "12px"
           }}>
-            {/* Bloco do Administrador Logado */}
             <div style={{
               backgroundColor: "#f8f9fa",
               padding: "8px 16px",
@@ -177,16 +167,13 @@ export default function ListarFornecedores() {
           </div>
         </header>
 
-        {/* Conteúdo */}
         <div style={{ padding: "30px 50px" }}>
-          {/* Card principal */}
           <div style={{
             backgroundColor: "#fff",
             borderRadius: "12px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             overflow: "hidden"
           }}>
-            {/* Header do card */}
             <div style={{
               padding: "25px 30px",
               borderBottom: "1px solid #e0e0e0",
@@ -223,7 +210,6 @@ export default function ListarFornecedores() {
               </button>
             </div>
 
-            {/* Barra de busca */}
             <div style={{ padding: "20px 30px", borderBottom: "1px solid #e0e0e0" }}>
               <div style={{ position: "relative" }}>
                 <Search size={20} style={{
@@ -251,7 +237,6 @@ export default function ListarFornecedores() {
               </div>
             </div>
 
-            {/* Tabela */}
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
