@@ -19,9 +19,8 @@ interface CarrinhoItem {
 export default function PDVSalesFlow() {
   const navigate = useNavigate();
 
-  // 🟢 CORREÇÃO: Lê do localStorage na inicialização
-  const [usuarioLogado, setUsuarioLogado] = useState<string>(() => localStorage.getItem("usuarioLogado") || "Usuário");
-  const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
+  const [usuarioLogado] = useState<string>("Admin");
+  const [nivelAcesso] = useState<string>("admin");
 
   const [cpf, setCpf] = useState("");
   const [nomeCliente, setNomeCliente] = useState("");
@@ -48,13 +47,6 @@ export default function PDVSalesFlow() {
 
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const user = localStorage.getItem("usuarioLogado");
-    const nivel = localStorage.getItem("nivelAcesso");
-    if (user) setUsuarioLogado(user);
-    if (nivel) setNivelAcesso(nivel);
-  }, []);
-
   const calcularTroco = useCallback(() => {
     const totalPago = (Number(dinheiro) || 0) + (Number(cartao) || 0) + (Number(pix) || 0);
     const trocoCalculado = totalPago - totalVenda;
@@ -80,14 +72,9 @@ export default function PDVSalesFlow() {
 
       const data = await response.json();
 
-      // Ajuste para pegar o primeiro item se for uma lista ou lista paginada
-      let found = null;
-      if (Array.isArray(data) && data.length > 0) found = data[0];
-      else if (data.results && Array.isArray(data.results) && data.results.length > 0) found = data.results[0];
-
-      if (found) {
-        setNomeCliente(found.nome || "");
-        setClienteId(found.id || null);
+      if (Array.isArray(data) && data.length > 0) {
+        setNomeCliente(data[0].nome || "");
+        setClienteId(data[0].id || null);
       } else {
         alert("Cliente não encontrado.");
         setNomeCliente("");
@@ -106,53 +93,77 @@ export default function PDVSalesFlow() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/produtos/?codigo_barras=${encodeURIComponent(codigoProduto)}`);
-      
-      if (!res.ok) {
-          throw new Error("Produto não encontrado");
+      let res = await fetch(`http://127.0.0.1:8000/api/produtos/?codigo_barras=${encodeURIComponent(codigoProduto)}`);
+      if (res.status === 404 || res.status === 405 || !res.ok) {
+        res = await fetch(`http://127.0.0.1:8000/api/produtos/?codigo_barras=${encodeURIComponent(codigoProduto)}`);
       }
 
       const json = await res.json();
-      
-      let found = null;
-      if (Array.isArray(json)) {
-          if (json.length > 0) found = json[0];
-      } else if (json.results && Array.isArray(json.results)) {
-          if (json.results.length > 0) found = json.results[0];
-      } else if (json.id) {
-          found = json;
+
+      if (json && typeof json === 'object' && !Array.isArray(json) && Object.values(json).some(v => typeof v === 'string' && v.includes('/produtos/'))) {
+        const listUrl = json.produtos || Object.values(json).find(v => typeof v === 'string' && v.includes('/produtos/'));
+        if (listUrl) {
+          const listRes = await fetch(listUrl);
+          if (!listRes.ok) throw new Error("Falha ao buscar lista de produtos (router-root).");
+          const lista = await listRes.json();
+          const found = Array.isArray(lista) ? lista.find((p: any) => String(p.codigo_barras) === codigoProduto) : null;
+          if (found) {
+            setNomeProduto(found.descricao || "");
+            setPreco(String(found.preco ?? "0"));
+            setEstoqueDisponivel(found.quantidade_estoque ?? null);
+            setProdutoIdEncontrado(found.id ?? null);
+            return;
+          } else {
+            alert("Produto não encontrado na lista retornada.");
+            setNomeProduto("");
+            setPreco("");
+            setEstoqueDisponivel(null);
+            setProdutoIdEncontrado(null);
+            return;
+          }
+        }
       }
 
-      if (found) {
-        setNomeProduto(found.descricao || "");
-        setPreco(String(found.preco ?? "0"));
-        setEstoqueDisponivel(found.quantidade_estoque ?? null);
-        setProdutoIdEncontrado(found.id ?? null);
-      } else {
-        alert("Produto não encontrado.");
-        setNomeProduto("");
-        setPreco("");
-        setEstoqueDisponivel(null);
-        setProdutoIdEncontrado(null);
+      if (Array.isArray(json)) {
+        if (json.length === 0) {
+          alert("Produto não encontrado.");
+          setNomeProduto("");
+          setPreco("");
+          setEstoqueDisponivel(null);
+          setProdutoIdEncontrado(null);
+          return;
+        }
+        const p = json[0];
+        setNomeProduto(p.descricao || "");
+        setPreco(String(p.preco ?? "0"));
+        setEstoqueDisponivel(p.quantidade_estoque ?? null);
+        setProdutoIdEncontrado(p.id ?? null);
+        return;
       }
-    } catch (err) {
-      console.error("Erro pesquisarProduto:", err);
-      alert("Erro ao pesquisar produto. Verifique o código.");
+
+      if (json && typeof json === 'object') {
+        const p = json;
+        setNomeProduto(p.descricao || "");
+        setPreco(String(p.preco ?? "0"));
+        setEstoqueDisponivel(p.quantidade_estoque ?? null);
+        setProdutoIdEncontrado(p.id ?? null);
+        return;
+      }
+
+      alert("Resposta inesperada do servidor ao buscar produto.");
       setNomeProduto("");
       setPreco("");
       setEstoqueDisponivel(null);
       setProdutoIdEncontrado(null);
+    } catch (err) {
+      console.error("Erro pesquisarProduto:", err);
+      alert("Erro ao pesquisar produto no servidor.");
     } finally {
       setLoading(false);
     }
   };
 
   const adicionarItem = () => {
-    if (!produtoIdEncontrado) {
-        alert("Por favor, pesquise e selecione um produto válido antes de adicionar.");
-        return;
-    }
-
     const qtd = Number(quantidade);
     const precoUnit = Number(preco);
 
@@ -174,7 +185,7 @@ export default function PDVSalesFlow() {
     const novoItem: CarrinhoItem = {
       codigo: codigoProduto,
       produto: nomeProduto,
-      produto_id: produtoIdEncontrado, 
+      produto_id: produtoIdEncontrado ?? null,
       qtd,
       preco: precoUnit,
       subtotal,
@@ -238,18 +249,18 @@ export default function PDVSalesFlow() {
 
   const finalizarVenda = async () => {
     const totalPago = (Number(dinheiro) || 0) + (Number(cartao) || 0) + (Number(pix) || 0);
-    
-    if (totalPago < (totalVenda - 0.01)) {
+    if (totalPago < totalVenda) {
       alert("O valor pago é menor que o total da venda!");
       return;
     }
 
     const vendaPayload = {
-      cliente: clienteId, 
+      cliente: clienteId,
       desconto_percentual: 0,
       total_venda: totalVenda,
+      obs: "",
       itens: carrinho.map(it => ({
-        produto: it.produto_id, 
+        produto: it.produto_id ?? null,
         quantidade: it.qtd,
         preco_unitario: it.preco,
         desconto_percentual: 0
@@ -265,14 +276,9 @@ export default function PDVSalesFlow() {
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Erro Bruto do Servidor:", errorText);
-        try {
-            const errorJson = JSON.parse(errorText);
-            alert(`Falha ao finalizar: ${JSON.stringify(errorJson)}`);
-        } catch {
-            alert("Erro Interno do Servidor (500). Verifique o terminal do Python.");
-        }
+        const text = await res.text();
+        console.error("Erro ao finalizar venda:", res.status, text);
+        alert("Falha ao finalizar venda. Verifique o console do servidor.");
         setLoading(false);
         return;
       }
@@ -282,8 +288,8 @@ export default function PDVSalesFlow() {
       fecharPagamento();
       setShowNotaFiscal(true);
     } catch (err) {
-      console.error("Erro de rede:", err);
-      alert("Erro de conexão com o servidor. Verifique se o Django está rodando.");
+      console.error("Erro rede finalizarVenda:", err);
+      alert("Erro de rede. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -317,7 +323,7 @@ export default function PDVSalesFlow() {
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
       <Sidebar usuarioLogado={usuarioLogado} nivelAcesso={nivelAcesso} onLogout={handleLogout} />
 
-      {/* Modais */}
+      {/* Modal de Nota Fiscal */}
       {showNotaFiscal && (
         <div 
           style={modalOverlay}
@@ -328,21 +334,56 @@ export default function PDVSalesFlow() {
           <div style={modalBox}>
             <div style={modalHeader}>
               <h3 style={{ margin: 0, color: "#fff", fontSize: "16px", fontWeight: 600 }}>
-                Venda Finalizada!
+                Venda Finalizada com Sucesso!
               </h3>
-              <button onClick={fecharNotaFiscal} style={iconButtonStyle}><X size={20} /></button>
+              <button 
+                onClick={fecharNotaFiscal}
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "6px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff"
+                }}
+              >
+                <X size={20} />
+              </button>
             </div>
 
             <div style={{ padding: "24px", textAlign: "center" }}>
+              <div style={{
+                width: "64px",
+                height: "64px",
+                borderRadius: "50%",
+                background: "#dcfce7",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px"
+              }}>
+                <FileText size={32} color="#16a34a" />
+              </div>
+
               <h3 style={{ margin: "0 0 8px 0", fontSize: "20px", color: "#1e293b" }}>
                 Venda #{vendaId?.toString().padStart(6, '0')}
               </h3>
               <p style={{ margin: "0 0 24px 0", color: "#64748b" }}>
-                Venda registrada com sucesso!
+                A venda foi registrada com sucesso no sistema
               </p>
 
-              <div style={totalBoxStyle}>
-                <div style={{ fontSize: "14px", color: "#64748b", marginBottom: "4px" }}>Total da Venda</div>
+              <div style={{
+                background: "#f8f9fa",
+                borderRadius: "8px",
+                padding: "16px",
+                marginBottom: "24px"
+              }}>
+                <div style={{ fontSize: "14px", color: "#64748b", marginBottom: "4px" }}>
+                  Total da Venda
+                </div>
                 <div style={{ fontSize: "28px", fontWeight: 700, color: "#16a34a" }}>
                   R$ {totalVenda.toFixed(2)}
                 </div>
@@ -351,21 +392,33 @@ export default function PDVSalesFlow() {
               <div style={{ display: "grid", gap: "10px" }}>
                 <button 
                   onClick={imprimirNotaFiscal}
-                  style={{ ...finalizarButton, background: "linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)" }}
+                  style={{
+                    ...finalizarButton,
+                    background: "linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)"
+                  }}
                 >
-                  <Printer size={18} /> Imprimir Nota Fiscal
+                  <Printer size={18} />
+                  Imprimir Nota Fiscal
                 </button>
 
                 <button 
                   onClick={baixarNotaFiscalPDF}
-                  style={{ ...finalizarButton, background: "linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)" }}
+                  style={{
+                    ...finalizarButton,
+                    background: "linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)"
+                  }}
                 >
-                  <Download size={18} /> Baixar PDF
+                  <Download size={18} />
+                  Baixar PDF
                 </button>
 
                 <button 
                   onClick={fecharNotaFiscal}
-                  style={{ ...secondaryButton, width: "100%", padding: "11px" }}
+                  style={{
+                    ...secondaryButton,
+                    width: "100%",
+                    padding: "11px"
+                  }}
                 >
                   Nova Venda
                 </button>
@@ -375,6 +428,7 @@ export default function PDVSalesFlow() {
         </div>
       )}
 
+      {/* Modal de Pagamento */}
       {showPagamento && (
         <div 
           style={modalOverlay}
@@ -387,12 +441,33 @@ export default function PDVSalesFlow() {
               <h3 style={{ margin: 0, color: "#fff", fontSize: "16px", fontWeight: 600 }}>
                 Formas de Pagamento
               </h3>
-              <button onClick={fecharPagamento} style={iconButtonStyle}><X size={20} /></button>
+              <button 
+                onClick={fecharPagamento}
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "6px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff"
+                }}
+              >
+                <X size={20} />
+              </button>
             </div>
 
             <div style={{ padding: "16px", flex: 1, overflowY: "auto" }}>
-              <div style={totalPaymentBox}>
-                <div style={{ fontSize: "10px", opacity: 0.9, marginBottom: "2px" }}>Total a Pagar</div>
+              <div style={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                borderRadius: "8px",
+                padding: "12px",
+                marginBottom: "12px",
+                color: "#fff"
+              }}>
+                <div style={{ fontSize: "10px", opacity: 0.9, marginBottom: "2px" }}>Total da Venda</div>
                 <div style={{ fontSize: "22px", fontWeight: 700 }}>
                   R$ {totalVenda.toFixed(2)}
                 </div>
@@ -406,7 +481,7 @@ export default function PDVSalesFlow() {
                     </div>
                     <div>
                       <div style={paymentMethodTitle}>Dinheiro</div>
-                      <div style={paymentMethodSubtitle}>Espécie</div>
+                      <div style={paymentMethodSubtitle}>Pagamento em espécie</div>
                     </div>
                   </div>
                   <input 
@@ -427,7 +502,7 @@ export default function PDVSalesFlow() {
                     </div>
                     <div>
                       <div style={paymentMethodTitle}>Cartão</div>
-                      <div style={paymentMethodSubtitle}>Débito/Crédito</div>
+                      <div style={paymentMethodSubtitle}>Débito ou Crédito</div>
                     </div>
                   </div>
                   <input 
@@ -448,7 +523,7 @@ export default function PDVSalesFlow() {
                     </div>
                     <div>
                       <div style={paymentMethodTitle}>PIX</div>
-                      <div style={paymentMethodSubtitle}>Transferência</div>
+                      <div style={paymentMethodSubtitle}>Transferência instantânea</div>
                     </div>
                   </div>
                   <input 
@@ -534,14 +609,12 @@ export default function PDVSalesFlow() {
 
         <div style={{ padding: 24 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-            
-            {/* LADO ESQUERDO */}
             <div>
               <div style={cardStyle}>
-                <h3 style={cardTitleStyle}>Dados do Cliente</h3>
+                <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 600 }}>Dados do Cliente</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
                   <input 
-                    placeholder="CPF do Cliente" 
+                    placeholder="CPF" 
                     value={cpf} 
                     onChange={(e) => setCpf(e.target.value)} 
                     style={inputStyle} 
@@ -551,18 +624,18 @@ export default function PDVSalesFlow() {
                   </button>
                 </div>
                 <input 
-                  placeholder="Nome do cliente (Opcional)" 
+                  placeholder="Nome do cliente" 
                   value={nomeCliente} 
-                  readOnly
-                  style={{ ...inputStyle, marginTop: 10, backgroundColor: '#f8f9fa' }} 
+                  onChange={(e) => setNomeCliente(e.target.value)} 
+                  style={{ ...inputStyle, marginTop: 10 }} 
                 />
               </div>
 
               <div style={{ ...cardStyle, marginTop: 16 }}>
-                <h3 style={cardTitleStyle}>Dados do Produto</h3>
+                <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 600 }}>Dados do Produto</h3>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input 
-                    placeholder="Código de Barras / SKU" 
+                    placeholder="Código/Barcode" 
                     value={codigoProduto} 
                     onChange={(e) => setCodigoProduto(e.target.value)} 
                     style={{ ...inputStyle, flex: 1 }} 
@@ -573,21 +646,20 @@ export default function PDVSalesFlow() {
                 </div>
 
                 <input 
-                  placeholder="Descrição do Produto" 
+                  placeholder="Nome do produto" 
                   value={nomeProduto} 
-                  readOnly
-                  style={{ ...inputStyle, marginTop: 10, backgroundColor: '#f8f9fa' }} 
+                  onChange={(e) => setNomeProduto(e.target.value)} 
+                  style={{ ...inputStyle, marginTop: 10 }} 
                 />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
                   <input 
-                    placeholder="Preço Unit." 
+                    placeholder="Preço" 
                     value={preco} 
-                    readOnly
-                    style={{ ...inputStyle, backgroundColor: '#f8f9fa' }} 
+                    onChange={(e) => setPreco(e.target.value)} 
+                    style={inputStyle} 
                   />
                   <input 
-                    placeholder="Quantidade" 
-                    type="number"
+                    placeholder="Qtd" 
                     value={quantidade} 
                     onChange={(e) => setQuantidade(e.target.value)} 
                     style={inputStyle} 
@@ -596,7 +668,7 @@ export default function PDVSalesFlow() {
 
                 <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ fontSize: 12, color: "#666" }}>
-                    Estoque Atual: <strong>{estoqueDisponivel === null ? "—" : estoqueDisponivel}</strong>
+                    Estoque: {estoqueDisponivel === null ? "—" : estoqueDisponivel}
                   </div>
                   <button onClick={adicionarItem} style={primaryGreenButton}>
                     <Plus size={16} />
@@ -606,29 +678,30 @@ export default function PDVSalesFlow() {
               </div>
             </div>
 
-            {/* LADO DIREITO */}
             <div>
               <div style={cardStyle}>
-                <h3 style={cardTitleStyle}>Carrinho de Compras</h3>
-                <div style={{ height: 320, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 15 }}>
+                <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 600 }}>Carrinho</h3>
+                <div style={{ maxHeight: 300, overflowY: "auto" }}>
                   {carrinho.length === 0 ? (
-                    <div style={{ padding: 40, color: "#94a3b8", textAlign: "center", display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <p>Nenhum item adicionado</p>
+                    <div style={{ padding: 20, color: "#999", textAlign: "center" }}>
+                      Nenhum item adicionado
                     </div>
                   ) : (
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead style={{ position: 'sticky', top: 0, backgroundColor: '#f1f5f9' }}>
+                      <thead>
                         <tr>
-                          <th style={thStyle}>Item</th>
+                          <th style={thStyle}>Código</th>
+                          <th style={thStyle}>Produto</th>
                           <th style={thStyle}>Qtd</th>
                           <th style={thStyle}>Preço</th>
-                          <th style={thStyle}>Total</th>
+                          <th style={thStyle}>Subtotal</th>
                           <th style={thStyle}></th>
                         </tr>
                       </thead>
                       <tbody>
                         {carrinho.map((it, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
+                          <tr key={idx}>
+                            <td style={tdStyle}>{it.codigo}</td>
                             <td style={tdStyle}>{it.produto}</td>
                             <td style={tdStyle}>{it.qtd}</td>
                             <td style={tdStyle}>R$ {it.preco.toFixed(2)}</td>
@@ -636,7 +709,12 @@ export default function PDVSalesFlow() {
                             <td style={tdStyle}>
                               <button 
                                 onClick={() => removerItem(idx)} 
-                                style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer" }}
+                                style={{ 
+                                  background: "none", 
+                                  border: "none", 
+                                  color: "#e91e63", 
+                                  cursor: "pointer" 
+                                }}
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -650,25 +728,24 @@ export default function PDVSalesFlow() {
               </div>
 
               <div style={{ ...cardStyle, marginTop: 16 }}>
-                <h3 style={cardTitleStyle}>Resumo</h3>
-                <div style={{ background: "#f8f9fa", padding: 20, borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 14, color: "#64748b", marginBottom: 5 }}>TOTAL DA VENDA</div>
-                  <div style={{ fontSize: 36, color: "#1e88e5", fontWeight: 700 }}>
+                <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 600 }}>Total da Venda</h3>
+                <div style={{ background: "#f8f9fa", padding: 16, borderRadius: 8 }}>
+                  <div style={{ fontSize: 14, color: "#666" }}>TOTAL</div>
+                  <div style={{ fontSize: 32, color: "#1e88e5", fontWeight: 700 }}>
                     R$ {totalVenda.toFixed(2)}
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 15 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
                   <button onClick={finalizarPagamento} style={primaryButton}>
-                    <CreditCard size={18} /> Pagamento
+                    Pagamento
                   </button>
                   <button onClick={cancelarVenda} style={cancelButton}>
-                    <X size={18} /> Cancelar
+                    Cancelar Venda
                   </button>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -676,91 +753,202 @@ export default function PDVSalesFlow() {
   );
 }
 
-// ---------- Estilos CSS ----------
+// ---------- Estilos ----------
 const modalOverlay: React.CSSProperties = { 
-  position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", 
-  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(4px)"
+  position: "fixed", 
+  inset: 0, 
+  backgroundColor: "rgba(0,0,0,0.6)", 
+  display: "flex", 
+  alignItems: "center", 
+  justifyContent: "center", 
+  zIndex: 1000,
+  backdropFilter: "blur(4px)"
 };
+
 const modalBox: React.CSSProperties = { 
-  width: 380, maxWidth: "95vw", maxHeight: "90vh", background: "#fff", 
-  borderRadius: 12, overflow: "hidden", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column"
+  width: 360, 
+  maxWidth: "95vw",
+  maxHeight: "95vh",
+  background: "#fff", 
+  borderRadius: 12, 
+  overflow: "hidden",
+  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+  display: "flex",
+  flexDirection: "column"
 };
+
 const modalHeader: React.CSSProperties = { 
-  background: "linear-gradient(135deg,#1e88e5,#1565c0)", padding: "14px 16px", 
-  color: "#fff", display: "flex", justifyContent: "space-between", alignItems: "center"
+  background: "linear-gradient(135deg,#1e88e5,#1565c0)", 
+  padding: "14px 16px", 
+  color: "#fff",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center"
 };
-const iconButtonStyle: React.CSSProperties = {
-  background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "6px", padding: "6px", 
-  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff"
-};
+
 const paymentMethodCard: React.CSSProperties = {
-  border: "2px solid #e2e8f0", borderRadius: "8px", padding: "8px", transition: "all 0.2s"
+  border: "2px solid #e2e8f0",
+  borderRadius: "8px",
+  padding: "8px",
+  transition: "all 0.2s"
 };
+
 const paymentMethodHeader: React.CSSProperties = {
-  display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px"
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  marginBottom: "8px"
 };
+
 const paymentIcon: React.CSSProperties = {
-  width: "32px", height: "32px", borderRadius: "6px", display: "flex", 
-  alignItems: "center", justifyContent: "center", flexShrink: 0
+  width: "32px",
+  height: "32px",
+  borderRadius: "6px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0
 };
-const paymentMethodTitle: React.CSSProperties = { fontSize: "13px", fontWeight: 600, color: "#1e293b" };
-const paymentMethodSubtitle: React.CSSProperties = { fontSize: "10px", color: "#64748b" };
+
+const paymentMethodTitle: React.CSSProperties = {
+  fontSize: "13px",
+  fontWeight: 600,
+  color: "#1e293b"
+};
+
+const paymentMethodSubtitle: React.CSSProperties = {
+  fontSize: "10px",
+  color: "#64748b"
+};
+
 const paymentInput: React.CSSProperties = {
-  width: "100%", padding: "8px 10px", fontSize: "15px", fontWeight: 600, border: "none", 
-  background: "#f8f9fa", borderRadius: "6px", boxSizing: "border-box", color: "#1e293b"
+  width: "100%",
+  padding: "8px 10px",
+  fontSize: "15px",
+  fontWeight: 600,
+  border: "none",
+  background: "#f8f9fa",
+  borderRadius: "6px",
+  boxSizing: "border-box",
+  color: "#1e293b"
 };
+
 const finalizarButton: React.CSSProperties = {
-  width: "100%", marginTop: "10px", padding: "12px", background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)", 
-  color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer", 
-  display: "flex", alignItems: "center", justifyContent: "center", gap: "6px"
+  width: "100%",
+  marginTop: "10px",
+  padding: "11px",
+  background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+  color: "#fff",
+  border: "none",
+  borderRadius: "8px",
+  fontSize: "14px",
+  fontWeight: 600,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "6px"
 };
+
 const headerStyle: React.CSSProperties = { 
-  background: "#fff", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e0e0e0" 
+  background: "#fff", 
+  padding: "20px 40px", 
+  display: "flex", 
+  justifyContent: "space-between", 
+  alignItems: "center", 
+  borderBottom: "1px solid #eee" 
 };
+
 const userBox: React.CSSProperties = { 
-  display: "flex", alignItems: "center", gap: 10, background: "#f8f9fa", padding: "8px 16px", borderRadius: "8px"
+  display: "flex", 
+  alignItems: "center", 
+  gap: 10,
+  background: "#f8f9fa",
+  padding: "8px 16px",
+  borderRadius: "8px"
 };
+
 const avatarStyle: React.CSSProperties = { 
-  width: 36, height: 36, borderRadius: "50%", background: "#1e88e5", color: "#fff", 
-  display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 
+  width: 36, 
+  height: 36, 
+  borderRadius: "50%", 
+  background: "#1e88e5", 
+  color: "#fff", 
+  display: "flex", 
+  alignItems: "center", 
+  justifyContent: "center", 
+  fontWeight: 700 
 };
+
 const cardStyle: React.CSSProperties = { 
-  background: "#fff", borderRadius: 12, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" 
+  background: "#fff", 
+  borderRadius: 12, 
+  padding: 16, 
+  boxShadow: "0 1px 6px rgba(0,0,0,0.04)" 
 };
-const cardTitleStyle: React.CSSProperties = { margin: "0 0 16px 0", fontSize: "16px", fontWeight: 600, color: "#1e293b" };
+
 const inputStyle: React.CSSProperties = { 
-  width: "100%", padding: 10, borderRadius: 8, border: "1px solid #e2e8f0", boxSizing: "border-box", fontSize: "14px"
+  width: "100%", 
+  padding: 10, 
+  borderRadius: 8, 
+  border: "1px solid #e2e8f0", 
+  boxSizing: "border-box",
+  fontSize: "14px"
 };
+
 const primaryButton: React.CSSProperties = { 
-  padding: "12px 16px", background: "#1e88e5", color: "#fff", border: "none", 
-  borderRadius: 8, cursor: "pointer", fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+  padding: "12px 16px", 
+  background: "#1e88e5", 
+  color: "#fff", 
+  border: "none", 
+  borderRadius: 8, 
+  cursor: "pointer",
+  fontWeight: 500
 };
+
 const primaryGreenButton: React.CSSProperties = { 
-  padding: "8px 12px", background: "#16a34a", color: "#fff", border: "none", 
-  borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontWeight: 500
+  padding: "8px 12px", 
+  background: "#4caf50", 
+  color: "#fff", 
+  border: "none", 
+  borderRadius: 8, 
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
+  fontWeight: 500
 };
+
 const secondaryButton: React.CSSProperties = { 
-  padding: "10px 16px", background: "#eef2ff", border: "1px solid #dbeafe", 
-  borderRadius: 8, cursor: "pointer", fontWeight: 500, color: "#1e88e5"
+  padding: "10px 16px", 
+  background: "#eef2ff", 
+  border: "1px solid #dbeafe", 
+  borderRadius: 8, 
+  cursor: "pointer",
+  fontWeight: 500,
+  color: "#1e88e5"
 };
+
 const cancelButton: React.CSSProperties = { 
-  padding: "12px 16px", background: "#ef4444", color: "#fff", border: "none", 
-  borderRadius: 8, cursor: "pointer", fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+  padding: "12px 16px", 
+  background: "#e91e63", 
+  color: "#fff", 
+  border: "none", 
+  borderRadius: 8, 
+  cursor: "pointer",
+  fontWeight: 500
 };
+
 const thStyle: React.CSSProperties = { 
-  textAlign: "left", padding: "10px 8px", fontSize: 12, color: "#64748b", fontWeight: 600, borderBottom: '1px solid #e2e8f0'
+  textAlign: "left", 
+  padding: "8px 6px", 
+  fontSize: 12, 
+  color: "#666",
+  fontWeight: 600
 };
+
 const tdStyle: React.CSSProperties = { 
-  padding: "10px 8px", fontSize: 14, color: "#334155" 
-};
-const successIconContainer: React.CSSProperties = {
-  width: "64px", height: "64px", borderRadius: "50%", background: "#dcfce7", 
-  display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px"
-};
-const totalBoxStyle: React.CSSProperties = {
-  background: "#f8f9fa", borderRadius: "8px", padding: "16px", marginBottom: "24px"
-};
-const totalPaymentBox: React.CSSProperties = {
-  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", borderRadius: "8px", 
-  padding: "12px", marginBottom: "12px", color: "#fff"
+  padding: "8px 6px", 
+  fontSize: 14, 
+  color: "#333" 
 };
