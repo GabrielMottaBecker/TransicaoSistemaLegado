@@ -17,16 +17,20 @@ interface Cliente {
 export default function ListarClientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin");
   const [loading, setLoading] = useState(false);
+  
+  // 🟢 CORREÇÃO: Lê do localStorage na inicialização
+  const [usuarioLogado, setUsuarioLogado] = useState<string>(() => localStorage.getItem("usuarioLogado") || "Usuário");
+  const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
+
   const navigate = useNavigate();
-  const nivelAcesso = "admin";
 
   useEffect(() => {
     const user = localStorage.getItem("usuarioLogado");
-    if (user) {
-      setUsuarioLogado(user);
-    }
+    const nivel = localStorage.getItem("nivelAcesso");
+    if (user) setUsuarioLogado(user);
+    if (nivel) setNivelAcesso(nivel);
+    
     carregarClientes();
   }, []);
 

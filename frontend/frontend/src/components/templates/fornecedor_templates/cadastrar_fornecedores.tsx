@@ -1,16 +1,13 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom"; 
-import { X, Loader2, MapPin, AlertCircle, Plus, Edit, Briefcase, Mail, Phone } from "lucide-react";
-
-// 🚨 CORREÇÃO FINAL: Usando a importação PADRÃO (sem chaves) para ser compatível com export default no side_bar.tsx
-import Sidebar from '../../widgets/side_bar.tsx'; 
+import { X, Loader2, MapPin, AlertCircle, Plus, Edit, Briefcase } from "lucide-react";
 
 /**
  * Interface que define a estrutura de um Fornecedor.
  */
 interface Fornecedor {
   id: number | null;
-  nome: string; // Razão Social (Mapeado para Nome)
+  nome: string; // Razão Social
   cnpj: string; 
   email: string; 
   celular: string; 
@@ -22,7 +19,6 @@ interface Fornecedor {
   cidade: string; 
   uf: string; 
   complemento: string; 
-  // Mantendo o estado com as chaves originais
   nome_fantasia: string; 
   inscricao_estadual: string;
   nome_contato: string;
@@ -36,7 +32,6 @@ const initialFornecedorState: Fornecedor = {
     uf: "", complemento: "", nome_fantasia: "", inscricao_estadual: "",
     nome_contato: "", telefone_contato: "", email_contato: "",
 };
-
 
 // --- Componentes Auxiliares (Modal de Sucesso) ---
 interface SavedModalProps {
@@ -70,11 +65,9 @@ const SavedModal: React.FC<SavedModalProps> = ({ isOpen, message, onClose }) => 
     );
 };
 
-
 // --- Componente Principal de Cadastro/Edição de Fornecedor ---
 
 export default function CadastrarFornecedor() {
-    // Detecta se estamos no modo de edição baseado no parâmetro ID da URL
     const { id } = useParams<{ id: string }>(); 
     const isEditMode = !!id;
 
@@ -90,17 +83,14 @@ export default function CadastrarFornecedor() {
         }
     }, [isEditMode, id, navigate]);
     
-    // Função para carregar dados do fornecedor via API (GET)
     const carregarFornecedorParaEdicao = async (fornecedorId: number) => {
         setLoading(true);
         try {
-            // A API deve responder a esta rota para carregar os dados
             const res = await fetch(`http://127.0.0.1:8000/api/fornecedores/${fornecedorId}/`);
             if (!res.ok) throw new Error("Fornecedor não encontrado.");
             
             const data = await res.json();
             
-            // Popula o estado com os dados recebidos da API
             setFornecedor({
                 ...initialFornecedorState, 
                 id: data.id,
@@ -160,12 +150,10 @@ export default function CadastrarFornecedor() {
         }
     };
 
-    // Função principal de submissão (POST/PUT via API)
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
-        // Mapeamento: Frontend -> Django (Payload)
         const fornecedorPayload = {
             nome: fornecedor.nome,
             cnpj: fornecedor.cnpj,
@@ -182,7 +170,6 @@ export default function CadastrarFornecedor() {
         };
         
         try {
-            // Define a URL e o método: POST para novo, PUT para edição
             const url = isEditMode && fornecedor.id 
                 ? `http://127.0.0.1:8000/api/fornecedores/${fornecedor.id}/` 
                 : `http://127.0.0.1:8000/api/fornecedores/`;
@@ -223,11 +210,9 @@ export default function CadastrarFornecedor() {
     return (
         <div style={pageContainerStyle}>
             
-            {/* O Sidebar (Usa o componente importado corretamente) */}
-            <Sidebar /> 
+            {/* Sidebar REMOVIDA daqui para layout limpo de cadastro */}
             
             <main style={mainContentStyle}>
-                {/* Header (Topo da página) */}
                 <header style={headerStyle}>
                     <div style={{ flex: 1 }}>
                         <h1 style={{ fontSize: "24px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>
@@ -247,29 +232,22 @@ export default function CadastrarFornecedor() {
                     <div style={formCardStyle}>
                         <form onSubmit={handleSubmit}>
                             
-                            {/* Seção 1: Dados do Fornecedor (Nome, Contatos, CNPJ) */}
                             <h3 style={sectionTitleStyle}><Briefcase size={20} /> Dados do Fornecedor</h3>
                             <div style={gridContainerStyle}>
-                                {/* LINHA 1: Nome (Razão Social) + CNPJ */}
                                 <input type="text" name="nome" value={fornecedor.nome} onChange={handleChange} placeholder="1. Nome / Razão Social" style={inputStyle} required />
                                 <input type="text" name="cnpj" value={fornecedor.cnpj} onChange={handleChange} placeholder="12. CNPJ" style={inputStyle} required />
-                                {/* Espaço Vazio para manter a grade (como RG no cliente) */}
                                 <div />
                             </div>
                             
                             <div style={gridContainerStyle}>
-                                {/* LINHA 2: Email, Celular, Telefone Fixo */}
                                 <input type="email" name="email" value={fornecedor.email} onChange={handleChange} placeholder="2. Email" style={inputStyle} required />
                                 <input type="text" name="celular" value={fornecedor.celular} onChange={handleChange} placeholder="3. Celular" style={inputStyle} required />
                                 <input type="text" name="telefone_fixo" value={fornecedor.telefone_fixo} onChange={handleChange} placeholder="4. Telefone Fixo (Opcional)" style={inputStyle} />
                             </div>
 
-                            {/* Seção 2: Endereço (CEP, Endereco, Número) */}
                             <h3 style={{ ...sectionTitleStyle, marginTop: "30px" }}><MapPin size={20} /> Endereço</h3>
                             
-                            {/* Linha de CEP/Endereço/Número (Layout adaptado para CEP/Endereço em 3 colunas) */}
                             <div style={gridContainerSmallStyle}> 
-                                {/* 5. CEP */}
                                 <div style={{ position: 'relative' }}>
                                     <input 
                                         type="text" name="cep" value={fornecedor.cep} onChange={handleChange} 
@@ -280,30 +258,22 @@ export default function CadastrarFornecedor() {
                                         {loading ? <Loader2 size={16} className="animate-spin" /> : "Buscar CEP"}
                                     </button>
                                 </div>
-                                {/* 6. Endereco */}
                                 <input type="text" name="endereco" value={fornecedor.endereco} onChange={handleChange} placeholder="6. Endereço (Rua/Avenida)" style={inputStyle} required />
-                                {/* 7. Número da Casa */}
                                 <input type="text" name="numero_casa" value={fornecedor.numero_casa} onChange={handleChange} placeholder="7. Número da Casa" style={inputStyle} required />
                             </div>
                             
-                            {/* Linha de Bairro/Cidade/UF/Complemento */}
                             <div style={gridContainerStyle}>
-                                {/* 8. Bairro */}
                                 <input type="text" name="bairro" value={fornecedor.bairro} onChange={handleChange} placeholder="8. Bairro" style={inputStyle} required />
-                                {/* 9. Cidade */}
                                 <input type="text" name="cidade" value={fornecedor.cidade} onChange={handleChange} placeholder="9. Cidade" style={inputStyle} required />
-                                {/* 11. UF */}
                                 <select name="uf" value={fornecedor.uf} onChange={handleChange} style={inputStyle} required>
                                     <option value="">11. UF</option>
                                     {["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"].map(uf => (
                                         <option key={uf} value={uf} style={{ padding: '12px' }}>{uf}</option>
                                     ))}
                                 </select>
-                                {/* 10. Complemento */}
                                 <input type="text" name="complemento" value={fornecedor.complemento} onChange={handleChange} placeholder="10. Complemento (Opcional)" style={inputStyle} />
                             </div>
                             
-                            {/* Botão de Submissão */}
                             <div style={{ marginTop: "30px" }}>
                                 <button
                                     type="submit"
@@ -324,14 +294,14 @@ export default function CadastrarFornecedor() {
                 message={isEditMode ? "O fornecedor foi atualizado com sucesso." : "O novo fornecedor foi adicionado com sucesso ao sistema."}
                 onClose={() => {
                     setIsSavedModalOpen(false);
-                    navigate("/fornecedores"); // Volta para a lista
+                    navigate("/fornecedores");
                 }}
             />
         </div>
     );
 }
 
-// --- Estilos CSS (Garantir que sejam incluídos) ---
+// --- Estilos CSS ---
 const modalOverlayStyle: React.CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 };
 const modalContentStyle: React.CSSProperties = { backgroundColor: '#fff', padding: '30px', borderRadius: '12px', maxWidth: '400px', width: '100%', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' };
 const closeButtonStyle: React.CSSProperties = { border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' };

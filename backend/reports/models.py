@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db.models import Sum
-from vendas.models import Venda
+# from vendas.models import Venda
 from clientes.models import Cliente
 from produtos.models import Produto
 
