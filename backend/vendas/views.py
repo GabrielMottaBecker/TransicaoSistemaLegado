@@ -1,4 +1,3 @@
-# vendas/views.py
 from django.db import transaction
 from django.http import HttpResponse
 from rest_framework import viewsets, status
@@ -19,7 +18,6 @@ try:
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
-
 
 class VendaViewSet(viewsets.ModelViewSet):
     """

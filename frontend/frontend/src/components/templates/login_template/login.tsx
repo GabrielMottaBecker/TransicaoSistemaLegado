@@ -55,7 +55,7 @@ function Login() {
       backgroundColor: "#f5f5f5",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     }}>
-      {/* 🎨 Lado esquerdo - Banner */}
+      {/* Lado esquerdo - Banner */}
       <div style={{
         flex: 1,
         background: "linear-gradient(135deg, #1e88e5 0%, #1565c0 100%)",
@@ -125,7 +125,7 @@ function Login() {
         </div>
       </div>
 
-      {/* 🔐 Lado direito - Formulário de Login */}
+      {/* Lado direito - Formulário de Login */}
       <div style={{
         flex: 1,
         display: "flex",

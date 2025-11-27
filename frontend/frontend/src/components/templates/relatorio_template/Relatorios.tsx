@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { DollarSign, Package, Users, Activity, TrendingUp, Loader2, AlertCircle } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
-// Assumindo que a Sidebar está em "../../widgets/side_bar.tsx"
 import Sidebar from "../../widgets/side_bar.tsx"; 
 
 const API_BASE_URL = "http://localhost:8000";
@@ -59,7 +58,6 @@ export default function Relatorios() {
       setLoading(true);
       setError(null);
 
-      // 🚨 CORREÇÃO DA URL: Inclui o prefixo 'reports/' para resolver o erro 404
       const res = await fetch(`${API_BASE_URL}/api/reports/relatorio_geral/`);
       
       if (!res.ok) {
@@ -91,7 +89,7 @@ export default function Relatorios() {
       const isPositive = comparativo.startsWith('+');
       return { 
           fontSize: '13px', 
-          color: isPositive ? '#10b981' : '#ef4444', // Verde ou Vermelho
+          color: isPositive ? '#10b981' : '#ef4444', 
           fontWeight: 500,
           marginTop: '6px'
       };

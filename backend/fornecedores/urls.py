@@ -3,6 +3,6 @@ from rest_framework import routers
 from .views import FornecedorViewSet
 
 router = routers.DefaultRouter()
-router.register(r'', FornecedorViewSet)  # vazio, pois já será incluído via /api/fornecedores/
+router.register(r'', FornecedorViewSet) 
 
 urlpatterns = router.urls

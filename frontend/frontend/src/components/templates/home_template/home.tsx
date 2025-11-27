@@ -46,7 +46,6 @@ export default function SalesFlowDashboard() {
       setLoading(true);
       setError(null);
       
-      // 🔧 CORREÇÃO: Adiciona o prefixo 'reports/' para consistência
       const res = await fetch(`${API_BASE_URL}/api/reports/relatorio_geral/`);
       
       if (!res.ok) {

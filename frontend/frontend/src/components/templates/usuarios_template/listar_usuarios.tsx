@@ -97,7 +97,7 @@ export default function ListarFuncionarios() {
         onLogout={handleLogout}
       />
 
-      {/* 🏠 Conteúdo Principal */}
+      {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Header */}
         <header style={{

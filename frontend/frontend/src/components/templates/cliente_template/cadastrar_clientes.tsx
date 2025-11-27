@@ -155,7 +155,6 @@ export default function CadastrarCliente() {
         e.preventDefault();
         setLoading(true);
 
-        // 🚀 PAYLOAD COMPLETO
         const clientePayload = {
             nome: cliente.nome, 
             rg: cliente.rg,

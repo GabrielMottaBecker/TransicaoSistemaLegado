@@ -1,10 +1,7 @@
-# vendas/models.py
-
 from django.db import models
-from produtos.models import Produto  # ← IMPORT do app produtos
-from clientes.models import Cliente  # ← IMPORT do app clientes
+from produtos.models import Produto  
+from clientes.models import Cliente  
 from django.contrib.auth.models import User
-
 
 class Venda(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='vendas')
@@ -31,7 +28,7 @@ class Venda(models.Model):
 class ItemVenda(models.Model):
     venda = models.ForeignKey(Venda, on_delete=models.CASCADE, related_name='itens')
     produto = models.ForeignKey(
-        'produtos.Produto',  # ← IMPORTANTE: Referência explícita ao app produtos
+        'produtos.Produto',  
         on_delete=models.PROTECT
     )
     quantidade = models.IntegerField()

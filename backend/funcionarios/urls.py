@@ -6,9 +6,7 @@ router = DefaultRouter()
 router.register(r'usuarios', UsuarioViewSet, basename='usuario')
 
 urlpatterns = [
-    # Rota de login (já estava correta com api/)
     path('api/login/', login_usuario, name='login_usuario'),
     
-    # 🚨 CORREÇÃO: Adicionamos 'api/' aqui para que o CRUD de usuários fique em /api/usuarios/
     path('api/', include(router.urls)),
 ]
