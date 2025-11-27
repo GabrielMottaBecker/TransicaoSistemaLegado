@@ -1,77 +1,87 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Edit, Trash2, Mail, Phone } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Mail, Phone, Loader2 } from "lucide-react";
 import Sidebar from '../../widgets/side_bar.tsx';
+import { useToast, useConfirm } from '../../widgets/ToastContext.tsx'; // ← IMPORTAR AMBOS
 
-interface Funcionario {
+interface Cliente {
   id: number;
   nome: string;
   cpf: string;
-  cargo: string;
-  nivel: string;
   email: string;
-  celular: string;
+  telefone: string; 
+  celular?: string; 
+  cidade: string;
+  uf: string;
 }
 
-export default function ListarFuncionarios() {
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+export default function ListarClientes() {
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin");
+  const [loading, setLoading] = useState(false);
+  
+  const [usuarioLogado, setUsuarioLogado] = useState<string>(() => localStorage.getItem("usuarioLogado") || "Usuário");
+  const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
+
   const navigate = useNavigate();
-  const nivelAcesso = "admin";
+  const { showToast } = useToast(); // ← TOAST
+  const { showConfirm } = useConfirm(); // ← CONFIRM MODAL
 
   useEffect(() => {
     const user = localStorage.getItem("usuarioLogado");
-    if (user) {
-      setUsuarioLogado(user);
-    }
-    carregarFuncionarios();
+    const nivel = localStorage.getItem("nivelAcesso");
+    if (user) setUsuarioLogado(user);
+    if (nivel) setNivelAcesso(nivel);
+    
+    carregarClientes();
   }, []);
 
-  const carregarFuncionarios = async () => {
+  const carregarClientes = async () => {
+    setLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/usuarios/");
-
-      // 1. Verifica se a resposta da API foi bem-sucedida (status 200-299)
+      const response = await fetch("http://127.0.0.1:8000/api/clientes/");
+      
       if (!response.ok) {
-        throw new Error(`Erro na API: ${response.status}`);
+        throw new Error(`Falha ao buscar clientes. Status: ${response.status}`);
       }
-
-      const data = await response.json();
-
-      // 2. Verifica se os dados recebidos são realmente uma lista (Array)
-      if (Array.isArray(data)) {
-        setFuncionarios(data);
-      } 
-      // 3. Suporte para caso a API use paginação (retorna objeto com chave 'results')
-      else if (data.results && Array.isArray(data.results)) {
-        setFuncionarios(data.results);
-      } 
-      else {
-        console.error("Formato de dados inválido recebido:", data);
-        setFuncionarios([]); // Previne a tela branca definindo uma lista vazia
-      }
-
+      
+      const data: Cliente[] = await response.json();
+      setClientes(data);
     } catch (error) {
-      console.error("Erro ao carregar funcionários:", error);
-      // Garante que seja sempre um array, mesmo se der erro de conexão
-      setFuncionarios([]); 
+      showToast('error', 'Erro!', 'Erro ao carregar clientes. Verifique o servidor Django.');
+      setClientes([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Tem certeza que deseja excluir este funcionário?")) {
-      try {
-        const response = await fetch(`http://127.0.0.1:8000/api/usuarios/${id}/`, { method: "DELETE" });
-        
-        if (!response.ok) {
-            throw new Error("Falha ao excluir");
-        }
-        carregarFuncionarios();
-      } catch (error) {
-        console.error("Erro ao excluir funcionário:", error);
-        alert("Não foi possível excluir o funcionário.");
+  // ✅ SUBSTITUIR window.confirm() POR showConfirm()
+  const handleDelete = async (id: number, nome: string) => {
+    // ← USA O MODAL PERSONALIZADO
+    const confirmed = await showConfirm({
+      title: 'Excluir Cliente',
+      message: `Tem certeza que deseja excluir ${nome}? Esta ação não pode ser desfeita.`,
+      confirmText: 'Sim, Excluir',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+
+    if (!confirmed) return; // Se cancelou, sai da função
+
+    // Se confirmou, prossegue com a exclusão
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/clientes/${id}/`, { 
+        method: "DELETE" 
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir');
       }
+
+      showToast('success', 'Cliente Excluído!', 'Cliente removido com sucesso.');
+      carregarClientes();
+    } catch (error) {
+      showToast('error', 'Erro!', 'Não foi possível excluir o cliente. Tente novamente.');
     }
   };
 
@@ -81,12 +91,11 @@ export default function ListarFuncionarios() {
     navigate("/");
   };
 
-  // Filtro seguro (agora garantimos que 'funcionarios' é sempre um array)
-  const funcionariosFiltrados = funcionarios.filter(func =>
-    (func.nome?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (func.cpf || "").includes(searchTerm) ||
-    (func.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (func.cargo?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+  const clientesFiltrados = clientes.filter(cliente =>
+    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.cpf.includes(searchTerm) ||
+    cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.cidade.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -97,9 +106,7 @@ export default function ListarFuncionarios() {
         onLogout={handleLogout}
       />
 
-      {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
         <header style={{
           backgroundColor: "#fff",
           padding: "20px 50px",
@@ -109,8 +116,8 @@ export default function ListarFuncionarios() {
           alignItems: "center"
         }}>
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>Funcionários</h1>
-            <p style={{ fontSize: "14px", color: "#64748b" }}>Gerencie seus funcionários</p>
+            <h1 style={{ fontSize: "24px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>Clientes</h1>
+            <p style={{ fontSize: "14px", color: "#64748b" }}>Gerencie seus clientes</p>
           </div>
 
           <div style={{
@@ -148,16 +155,13 @@ export default function ListarFuncionarios() {
           </div>
         </header>
 
-        {/* Conteúdo */}
         <div style={{ padding: "30px 50px" }}>
-          {/* Card principal */}
           <div style={{
             backgroundColor: "#fff",
             borderRadius: "12px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             overflow: "hidden"
           }}>
-            {/* Header do card */}
             <div style={{
               padding: "25px 30px",
               borderBottom: "1px solid #e0e0e0",
@@ -167,14 +171,14 @@ export default function ListarFuncionarios() {
             }}>
               <div>
                 <h2 style={{ fontSize: "18px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>
-                  Lista de Funcionários
+                  Lista de Clientes
                 </h2>
                 <p style={{ fontSize: "13px", color: "#64748b" }}>
-                  {funcionariosFiltrados.length} funcionário(s) cadastrado(s)
+                  {clientesFiltrados.length} cliente(s) cadastrado(s)
                 </p>
               </div>
               <button
-                onClick={() => navigate("/cadastrar_funcionario")}
+                onClick={() => navigate("/cadastrar_cliente")}
                 style={{
                   backgroundColor: "#1e88e5",
                   color: "#fff",
@@ -190,11 +194,10 @@ export default function ListarFuncionarios() {
                 }}
               >
                 <Plus size={18} />
-                Novo Funcionário
+                Novo Cliente
               </button>
             </div>
 
-            {/* Barra de busca */}
             <div style={{ padding: "20px 30px", borderBottom: "1px solid #e0e0e0" }}>
               <div style={{ position: "relative" }}>
                 <Search size={20} style={{
@@ -206,7 +209,7 @@ export default function ListarFuncionarios() {
                 }} />
                 <input
                   type="text"
-                  placeholder="Buscar por nome, CPF, email ou cargo..."
+                  placeholder="Buscar por nome, CPF, email ou cidade..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
@@ -222,35 +225,49 @@ export default function ListarFuncionarios() {
               </div>
             </div>
 
-            {/* Tabela */}
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ backgroundColor: "#f8f9fa" }}>
                     <th style={tableHeaderStyle}>Nome</th>
                     <th style={tableHeaderStyle}>CPF</th>
-                    <th style={tableHeaderStyle}>Cargo</th>
-                    <th style={tableHeaderStyle}>Nível</th>
                     <th style={tableHeaderStyle}>Email</th>
-                    <th style={tableHeaderStyle}>Celular</th>
+                    <th style={tableHeaderStyle}>Telefone</th>
+                    <th style={tableHeaderStyle}>Cidade/UF</th>
                     <th style={tableHeaderStyle}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {funcionariosFiltrados.length === 0 ? (
+                  {loading ? (
                     <tr>
-                      <td colSpan={7} style={{
+                      <td colSpan={6} style={{
                         padding: "40px",
                         textAlign: "center",
                         color: "#94a3b8",
                         fontSize: "14px"
                       }}>
-                        Nenhum funcionário encontrado
+                        <Loader2 size={24} style={{ 
+                          color: '#1e88e5', 
+                          margin: '0 auto 10px',
+                          animation: 'spin 1s linear infinite'
+                        }} />
+                        <p>Carregando dados...</p>
+                      </td>
+                    </tr>
+                  ) : clientesFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{
+                        padding: "40px",
+                        textAlign: "center",
+                        color: "#94a3b8",
+                        fontSize: "14px"
+                      }}>
+                        Nenhum cliente encontrado
                       </td>
                     </tr>
                   ) : (
-                    funcionariosFiltrados.map((func) => (
-                      <tr key={func.id} style={{
+                    clientesFiltrados.map((cliente) => (
+                      <tr key={cliente.id} style={{
                         borderBottom: "1px solid #e0e0e0",
                         transition: "background-color 0.2s"
                       }}
@@ -271,41 +288,29 @@ export default function ListarFuncionarios() {
                               fontWeight: 600,
                               fontSize: "14px"
                             }}>
-                              {func.nome ? func.nome.charAt(0).toUpperCase() : "?"}
+                              {cliente.nome.charAt(0).toUpperCase()}
                             </div>
-                            <span style={{ fontWeight: 500 }}>{func.nome}</span>
+                            <span style={{ fontWeight: 500 }}>{cliente.nome}</span>
                           </div>
                         </td>
-                        <td style={tableCellStyle}>{func.cpf}</td>
-                        <td style={tableCellStyle}>{func.cargo}</td>
-                        <td style={tableCellStyle}>
-                          <span style={{
-                            backgroundColor: "#e3f2fd",
-                            color: "#1e88e5",
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            fontSize: "12px",
-                            fontWeight: 500
-                          }}>
-                            {func.nivel}
-                          </span>
-                        </td>
+                        <td style={tableCellStyle}>{cliente.cpf}</td>
                         <td style={tableCellStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b" }}>
                             <Mail size={16} />
-                            {func.email}
+                            {cliente.email}
                           </div>
                         </td>
                         <td style={tableCellStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b" }}>
                             <Phone size={16} />
-                            {func.celular}
+                            {cliente.celular || cliente.telefone || 'N/A'}
                           </div>
                         </td>
+                        <td style={tableCellStyle}>{cliente.cidade}/{cliente.uf}</td>
                         <td style={tableCellStyle}>
                           <div style={{ display: "flex", gap: "8px" }}>
                             <button
-                              onClick={() => navigate(`/editar_funcionario/${func.id}`)}
+                              onClick={() => navigate(`/editar_clientes/${cliente.id}`)}
                               style={{
                                 backgroundColor: "transparent",
                                 border: "none",
@@ -322,7 +327,7 @@ export default function ListarFuncionarios() {
                               <Edit size={18} />
                             </button>
                             <button
-                              onClick={() => handleDelete(func.id)}
+                              onClick={() => handleDelete(cliente.id, cliente.nome)}
                               style={{
                                 backgroundColor: "transparent",
                                 border: "none",

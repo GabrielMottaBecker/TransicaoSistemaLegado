@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Edit, Trash2, Loader2, Package } from "lucide-react";
 import Sidebar from "../../widgets/side_bar.tsx";
+import { useToast, useConfirm } from '../../widgets/ToastContext.tsx';
 
 interface Produto {
   id: number;
@@ -13,7 +14,6 @@ interface Produto {
   ativo: boolean;
 }
 
-// Estilos padronizados
 const tableHeaderStyle: React.CSSProperties = {
   padding: "16px 20px",
   textAlign: "left",
@@ -39,6 +39,8 @@ export default function ListarProdutos() {
   const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
 
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  const { showConfirm } = useConfirm();
 
   useEffect(() => {
     const user = localStorage.getItem("usuarioLogado");
@@ -72,27 +74,35 @@ export default function ListarProdutos() {
       setProdutos(lista);
 
     } catch (error) {
-      console.error("Erro ao carregar produtos:", error);
+      showToast('error', 'Erro!', 'Erro ao carregar produtos. Verifique o servidor Django.');
       setProdutos([]); 
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Tem certeza que deseja excluir este produto? Esta ação é irreversível.")) {
-      try {
-        const response = await fetch(`http://127.0.0.1:8000/api/produtos/${id}/`, {
-          method: "DELETE",
-        });
-        
-        if (!response.ok) throw new Error("Erro ao excluir");
-        
-        carregarProdutos();
-      } catch (error) {
-        console.error(error);
-        alert("Erro ao excluir produto. Verifique se ele está vinculado a uma venda.");
-      }
+  const handleDelete = async (id: number, descricao: string) => {
+    const confirmed = await showConfirm({
+      title: 'Excluir Produto',
+      message: `Tem certeza que deseja excluir "${descricao}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Sim, Excluir',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/produtos/${id}/`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) throw new Error("Erro ao excluir");
+      
+      showToast('success', 'Produto Excluído!', 'Produto removido com sucesso.');
+      carregarProdutos();
+    } catch (error) {
+      showToast('error', 'Erro!', 'Não foi possível excluir o produto. Verifique se ele está vinculado a uma venda.');
     }
   };
 
@@ -124,7 +134,6 @@ export default function ListarProdutos() {
       <Sidebar usuarioLogado={usuarioLogado} nivelAcesso={nivelAcesso} onLogout={handleLogout} />
 
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
         <header style={{
           backgroundColor: "#fff",
           padding: "20px 50px",
@@ -143,7 +152,6 @@ export default function ListarProdutos() {
             alignItems: "center",
             gap: "12px"
           }}>
-            {/* Bloco do Administrador Logado */}
             <div style={{
               backgroundColor: "#f8f9fa",
               padding: "8px 16px",
@@ -174,16 +182,13 @@ export default function ListarProdutos() {
           </div>
         </header>
 
-        {/* Conteúdo */}
         <div style={{ padding: "30px 50px" }}>
-          {/* Card principal */}
           <div style={{
             backgroundColor: "#fff",
             borderRadius: "12px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             overflow: "hidden"
           }}>
-            {/* Header do card */}
             <div style={{
               padding: "25px 30px",
               borderBottom: "1px solid #e0e0e0",
@@ -220,7 +225,6 @@ export default function ListarProdutos() {
               </button>
             </div>
 
-            {/* Barra de busca */}
             <div style={{ padding: "20px 30px", borderBottom: "1px solid #e0e0e0" }}>
               <div style={{ position: "relative" }}>
                 <Search size={20} style={{
@@ -248,7 +252,6 @@ export default function ListarProdutos() {
               </div>
             </div>
 
-            {/* Tabela */}
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -386,7 +389,7 @@ export default function ListarProdutos() {
                               <Edit size={18} />
                             </button>
                             <button
-                              onClick={() => handleDelete(p.id)}
+                              onClick={() => handleDelete(p.id, p.descricao)}
                               style={{
                                 backgroundColor: "transparent",
                                 border: "none",
