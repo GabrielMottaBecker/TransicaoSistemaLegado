@@ -37,7 +37,7 @@ export default function Sidebar({ usuarioLogado: propUsuario, nivelAcesso: propN
 
   // CONFIGURAÇÃO DO MENU
   // adminOnly: true -> Aparece SÓ para admin
-  // adminOnly: false -> Aparece para TODOS (igual sua imagem)
+  // adminOnly: false -> Aparece para TODOS 
   const menuItems = [
     { path: "/home", icon: Home, label: "Dashboard", adminOnly: false },
     { path: "/clientes", icon: Briefcase, label: "Clientes", adminOnly: false },

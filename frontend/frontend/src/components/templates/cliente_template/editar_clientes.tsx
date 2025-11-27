@@ -1,5 +1,4 @@
 import React from 'react';
-// ✅ Importa o componente unificado que realmente faz a lógica de edição (GET/PUT)
 import CadastrarCliente from './cadastrar_clientes.tsx'; 
 import { useParams } from 'react-router-dom';
 

@@ -39,7 +39,6 @@ export default function ListarFornecedores() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   
-  // 🟢 CORREÇÃO: Lê do localStorage na inicialização
   const [usuarioLogado, setUsuarioLogado] = useState<string>(() => localStorage.getItem("usuarioLogado") || "Usuário");
   const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
 

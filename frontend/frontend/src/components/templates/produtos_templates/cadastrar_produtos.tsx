@@ -132,7 +132,7 @@ export default function CadastrarProduto() {
         e.preventDefault();
         setLoading(true);
 
-        // ⚠️ CORREÇÃO AQUI: Usando parseCurrency para tratar vírgulas
+        // CORREÇÃO AQUI: Usando parseCurrency para tratar vírgulas
         const produtoPayload = {
             descricao: produto.descricao,
             preco: parseCurrency(produto.preco),

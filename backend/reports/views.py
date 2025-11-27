@@ -13,27 +13,25 @@ class RelatorioGeralView(APIView):
     def get(self, request, format=None):
         hoje = date.today()
         
-        # --- 1. Vendas Totais ---
-        # CORREÇÃO: Agora usamos 'total_venda' para alinhar com o models.py atualizado
+        # Vendas Totais
         vendas_totais = Venda.objects.aggregate(
             total_valor=Sum('total_venda'),
             total_qtd=Count('id')
         )
         
-        # --- 2. Clientes Ativos ---
+        # Clientes Ativos 
         clientes_ativos = Cliente.objects.count()
         
-        # --- 3. Produtos Ativos ---
+        # Produtos Ativos
         produtos_ativos = Produto.objects.filter(ativo=True).count()
         
-        # --- 4. Vendas Recentes (Últimos 5 registros) ---
+        # Vendas Recentes (Últimos 5 registros) 
         vendas_recentes = Venda.objects.select_related('cliente').order_by('-data_venda')[:5]
         
         vendas_recentes_data = []
         pagamentos_mock = ['PIX', 'Cartão', 'Dinheiro'] 
         
         for i, venda in enumerate(vendas_recentes):
-            # Tratamento de segurança para cliente nulo
             nome_cliente = 'Consumidor Final'
             if venda.cliente:
                 nome_cliente = venda.cliente.nome
@@ -42,11 +40,10 @@ class RelatorioGeralView(APIView):
                 'data': venda.data_venda.strftime('%d/%m/%Y'),
                 'cliente': nome_cliente,
                 'pagamento': pagamentos_mock[i % len(pagamentos_mock)], 
-                # CORREÇÃO: Usando 'total_venda' aqui também
                 'valor': float(venda.total_venda) 
             })
 
-        # --- 5. Estoque de Produtos (Top 5 menor estoque) ---
+        # Estoque de Produtos (Top 5 menor estoque) 
         produtos_estoque = Produto.objects.order_by('quantidade_estoque')[:5]
         
         estoque_data = []
@@ -62,7 +59,7 @@ class RelatorioGeralView(APIView):
                 'vendidos': vendido_total
             })
 
-        # --- Consolidação Final ---
+        # Consolidação Final 
         data = {
             'vendas_totais': {
                 'valor': float(vendas_totais['total_valor'] or 0),

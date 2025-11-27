@@ -1,13 +1,12 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import Venda, ItemVenda  # Models de vendas
-from produtos.models import Produto   # ← CORRIJA: import do app produtos
-from clientes.models import Cliente   # ← Verifique se Cliente também está no app correto
-
+from .models import Venda, ItemVenda  
+from produtos.models import Produto   
+from clientes.models import Cliente   
 
 class ItemVendaSerializer(serializers.ModelSerializer):
     produto = serializers.PrimaryKeyRelatedField(
-        queryset=Produto.objects.all()  # Agora vai funcionar!
+        queryset=Produto.objects.all()  
     )
     produto_nome = serializers.CharField(source="produto.descricao", read_only=True)
     subtotal = serializers.SerializerMethodField()
@@ -88,7 +87,6 @@ class VendaSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             validated_data["vendedor"] = request.user
         else:
-            # Se não houver usuário autenticado, use um padrão ou deixe None
             validated_data["vendedor"] = None
 
         with transaction.atomic():
