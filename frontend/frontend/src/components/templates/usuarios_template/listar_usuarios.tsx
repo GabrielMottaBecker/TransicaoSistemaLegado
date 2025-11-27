@@ -1,87 +1,99 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Edit, Trash2, Mail, Phone, Loader2 } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Mail, Phone } from "lucide-react";
 import Sidebar from '../../widgets/side_bar.tsx';
-import { useToast, useConfirm } from '../../widgets/ToastContext.tsx'; // ← IMPORTAR AMBOS
+// Importação do sistema de notificações
+import { useToast, useConfirm } from '../../widgets/ToastContext.tsx'; 
 
-interface Cliente {
+interface Funcionario {
   id: number;
   nome: string;
   cpf: string;
+  cargo: string;
+  nivel: string;
   email: string;
-  telefone: string; 
-  celular?: string; 
-  cidade: string;
-  uf: string;
+  celular: string;
 }
 
-export default function ListarClientes() {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+export default function ListarFuncionarios() {
+  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [usuarioLogado, setUsuarioLogado] = useState<string>("Admin");
   
-  const [usuarioLogado, setUsuarioLogado] = useState<string>(() => localStorage.getItem("usuarioLogado") || "Usuário");
-  const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
-
   const navigate = useNavigate();
-  const { showToast } = useToast(); // ← TOAST
-  const { showConfirm } = useConfirm(); // ← CONFIRM MODAL
+  const nivelAcesso = "admin";
+
+  // Hooks do seu sistema de notificação
+  const { showToast } = useToast();
+  const { showConfirm } = useConfirm();
 
   useEffect(() => {
     const user = localStorage.getItem("usuarioLogado");
-    const nivel = localStorage.getItem("nivelAcesso");
-    if (user) setUsuarioLogado(user);
-    if (nivel) setNivelAcesso(nivel);
-    
-    carregarClientes();
+    if (user) {
+      setUsuarioLogado(user);
+    }
+    carregarFuncionarios();
   }, []);
 
-  const carregarClientes = async () => {
-    setLoading(true);
+  const carregarFuncionarios = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/clientes/");
-      
+      const response = await fetch("http://127.0.0.1:8000/api/usuarios/");
+
       if (!response.ok) {
-        throw new Error(`Falha ao buscar clientes. Status: ${response.status}`);
+        throw new Error(`Erro na API: ${response.status}`);
       }
-      
-      const data: Cliente[] = await response.json();
-      setClientes(data);
+
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setFuncionarios(data);
+      } 
+      else if (data.results && Array.isArray(data.results)) {
+        setFuncionarios(data.results);
+      } 
+      else {
+        console.error("Formato de dados inválido recebido:", data);
+        setFuncionarios([]);
+        // Feedback visual para erro de formato
+        showToast("error", "Erro ao carregar", "Formato de dados inválido recebido do servidor.");
+      }
+
     } catch (error) {
-      showToast('error', 'Erro!', 'Erro ao carregar clientes. Verifique o servidor Django.');
-      setClientes([]);
-    } finally {
-      setLoading(false);
+      console.error("Erro ao carregar funcionários:", error);
+      setFuncionarios([]);
+      // Feedback visual para erro de conexão/API
+      showToast("error", "Erro de Conexão", "Não foi possível carregar a lista de funcionários.");
     }
   };
 
-  // ✅ SUBSTITUIR window.confirm() POR showConfirm()
-  const handleDelete = async (id: number, nome: string) => {
-    // ← USA O MODAL PERSONALIZADO
+  const handleDelete = async (id: number) => {
+    // 1. Usa o seu showConfirm personalizado em vez de window.confirm
     const confirmed = await showConfirm({
-      title: 'Excluir Cliente',
-      message: `Tem certeza que deseja excluir ${nome}? Esta ação não pode ser desfeita.`,
-      confirmText: 'Sim, Excluir',
-      cancelText: 'Cancelar',
-      type: 'danger'
+      title: "Excluir Funcionário",
+      message: "Tem certeza que deseja excluir este funcionário? Esta ação não pode ser desfeita.",
+      confirmText: "Sim, Excluir",
+      cancelText: "Cancelar",
+      type: "danger"
     });
 
-    if (!confirmed) return; // Se cancelou, sai da função
+    // Se o usuário clicou em "Cancelar", a função para aqui
+    if (!confirmed) return;
 
-    // Se confirmou, prossegue com a exclusão
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/clientes/${id}/`, { 
-        method: "DELETE" 
-      });
-
+      const response = await fetch(`http://127.0.0.1:8000/api/usuarios/${id}/`, { method: "DELETE" });
+      
       if (!response.ok) {
-        throw new Error('Erro ao excluir');
+        throw new Error("Falha ao excluir");
       }
+      
+      // 2. Feedback de sucesso
+      showToast("success", "Sucesso", "Funcionário excluído com sucesso!");
+      carregarFuncionarios();
 
-      showToast('success', 'Cliente Excluído!', 'Cliente removido com sucesso.');
-      carregarClientes();
     } catch (error) {
-      showToast('error', 'Erro!', 'Não foi possível excluir o cliente. Tente novamente.');
+      console.error("Erro ao excluir funcionário:", error);
+      // 3. Feedback de erro
+      showToast("error", "Erro", "Não foi possível excluir o funcionário.");
     }
   };
 
@@ -91,11 +103,11 @@ export default function ListarClientes() {
     navigate("/");
   };
 
-  const clientesFiltrados = clientes.filter(cliente =>
-    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.cpf.includes(searchTerm) ||
-    cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.cidade.toLowerCase().includes(searchTerm.toLowerCase())
+  const funcionariosFiltrados = funcionarios.filter(func =>
+    (func.nome?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (func.cpf || "").includes(searchTerm) ||
+    (func.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (func.cargo?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -106,7 +118,9 @@ export default function ListarClientes() {
         onLogout={handleLogout}
       />
 
+      {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Header */}
         <header style={{
           backgroundColor: "#fff",
           padding: "20px 50px",
@@ -116,8 +130,8 @@ export default function ListarClientes() {
           alignItems: "center"
         }}>
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: "24px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>Clientes</h1>
-            <p style={{ fontSize: "14px", color: "#64748b" }}>Gerencie seus clientes</p>
+            <h1 style={{ fontSize: "24px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>Funcionários</h1>
+            <p style={{ fontSize: "14px", color: "#64748b" }}>Gerencie seus funcionários</p>
           </div>
 
           <div style={{
@@ -155,13 +169,16 @@ export default function ListarClientes() {
           </div>
         </header>
 
+        {/* Conteúdo */}
         <div style={{ padding: "30px 50px" }}>
+          {/* Card principal */}
           <div style={{
             backgroundColor: "#fff",
             borderRadius: "12px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             overflow: "hidden"
           }}>
+            {/* Header do card */}
             <div style={{
               padding: "25px 30px",
               borderBottom: "1px solid #e0e0e0",
@@ -171,14 +188,14 @@ export default function ListarClientes() {
             }}>
               <div>
                 <h2 style={{ fontSize: "18px", fontWeight: 600, color: "#1e293b", marginBottom: "4px" }}>
-                  Lista de Clientes
+                  Lista de Funcionários
                 </h2>
                 <p style={{ fontSize: "13px", color: "#64748b" }}>
-                  {clientesFiltrados.length} cliente(s) cadastrado(s)
+                  {funcionariosFiltrados.length} funcionário(s) cadastrado(s)
                 </p>
               </div>
               <button
-                onClick={() => navigate("/cadastrar_cliente")}
+                onClick={() => navigate("/cadastrar_funcionario")}
                 style={{
                   backgroundColor: "#1e88e5",
                   color: "#fff",
@@ -194,10 +211,11 @@ export default function ListarClientes() {
                 }}
               >
                 <Plus size={18} />
-                Novo Cliente
+                Novo Funcionário
               </button>
             </div>
 
+            {/* Barra de busca */}
             <div style={{ padding: "20px 30px", borderBottom: "1px solid #e0e0e0" }}>
               <div style={{ position: "relative" }}>
                 <Search size={20} style={{
@@ -209,7 +227,7 @@ export default function ListarClientes() {
                 }} />
                 <input
                   type="text"
-                  placeholder="Buscar por nome, CPF, email ou cidade..."
+                  placeholder="Buscar por nome, CPF, email ou cargo..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
@@ -225,49 +243,35 @@ export default function ListarClientes() {
               </div>
             </div>
 
+            {/* Tabela */}
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ backgroundColor: "#f8f9fa" }}>
                     <th style={tableHeaderStyle}>Nome</th>
                     <th style={tableHeaderStyle}>CPF</th>
+                    <th style={tableHeaderStyle}>Cargo</th>
+                    <th style={tableHeaderStyle}>Nível</th>
                     <th style={tableHeaderStyle}>Email</th>
-                    <th style={tableHeaderStyle}>Telefone</th>
-                    <th style={tableHeaderStyle}>Cidade/UF</th>
+                    <th style={tableHeaderStyle}>Celular</th>
                     <th style={tableHeaderStyle}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? (
+                  {funcionariosFiltrados.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{
+                      <td colSpan={7} style={{
                         padding: "40px",
                         textAlign: "center",
                         color: "#94a3b8",
                         fontSize: "14px"
                       }}>
-                        <Loader2 size={24} style={{ 
-                          color: '#1e88e5', 
-                          margin: '0 auto 10px',
-                          animation: 'spin 1s linear infinite'
-                        }} />
-                        <p>Carregando dados...</p>
-                      </td>
-                    </tr>
-                  ) : clientesFiltrados.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} style={{
-                        padding: "40px",
-                        textAlign: "center",
-                        color: "#94a3b8",
-                        fontSize: "14px"
-                      }}>
-                        Nenhum cliente encontrado
+                        Nenhum funcionário encontrado
                       </td>
                     </tr>
                   ) : (
-                    clientesFiltrados.map((cliente) => (
-                      <tr key={cliente.id} style={{
+                    funcionariosFiltrados.map((func) => (
+                      <tr key={func.id} style={{
                         borderBottom: "1px solid #e0e0e0",
                         transition: "background-color 0.2s"
                       }}
@@ -288,29 +292,41 @@ export default function ListarClientes() {
                               fontWeight: 600,
                               fontSize: "14px"
                             }}>
-                              {cliente.nome.charAt(0).toUpperCase()}
+                              {func.nome ? func.nome.charAt(0).toUpperCase() : "?"}
                             </div>
-                            <span style={{ fontWeight: 500 }}>{cliente.nome}</span>
+                            <span style={{ fontWeight: 500 }}>{func.nome}</span>
                           </div>
                         </td>
-                        <td style={tableCellStyle}>{cliente.cpf}</td>
+                        <td style={tableCellStyle}>{func.cpf}</td>
+                        <td style={tableCellStyle}>{func.cargo}</td>
+                        <td style={tableCellStyle}>
+                          <span style={{
+                            backgroundColor: "#e3f2fd",
+                            color: "#1e88e5",
+                            padding: "4px 12px",
+                            borderRadius: "12px",
+                            fontSize: "12px",
+                            fontWeight: 500
+                          }}>
+                            {func.nivel}
+                          </span>
+                        </td>
                         <td style={tableCellStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b" }}>
                             <Mail size={16} />
-                            {cliente.email}
+                            {func.email}
                           </div>
                         </td>
                         <td style={tableCellStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b" }}>
                             <Phone size={16} />
-                            {cliente.celular || cliente.telefone || 'N/A'}
+                            {func.celular}
                           </div>
                         </td>
-                        <td style={tableCellStyle}>{cliente.cidade}/{cliente.uf}</td>
                         <td style={tableCellStyle}>
                           <div style={{ display: "flex", gap: "8px" }}>
                             <button
-                              onClick={() => navigate(`/editar_clientes/${cliente.id}`)}
+                              onClick={() => navigate(`/editar_funcionario/${func.id}`)}
                               style={{
                                 backgroundColor: "transparent",
                                 border: "none",
@@ -327,7 +343,7 @@ export default function ListarClientes() {
                               <Edit size={18} />
                             </button>
                             <button
-                              onClick={() => handleDelete(cliente.id, cliente.nome)}
+                              onClick={() => handleDelete(func.id)}
                               style={{
                                 backgroundColor: "transparent",
                                 border: "none",
