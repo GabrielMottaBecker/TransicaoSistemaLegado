@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Edit, Trash2, Mail, Phone, Loader2 } from "lucide-react";
-import Sidebar from '../../widgets/side_bar.tsx'; 
+import Sidebar from '../../widgets/side_bar.tsx';
+import { useToast, useConfirm } from '../../widgets/ToastContext.tsx';
 
 interface Fornecedor {
   id: number;
@@ -43,6 +44,8 @@ export default function ListarFornecedores() {
   const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
 
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  const { showConfirm } = useConfirm();
 
   useEffect(() => {
     const user = localStorage.getItem("usuarioLogado");
@@ -65,28 +68,37 @@ export default function ListarFornecedores() {
         const data: Fornecedor[] = await response.json();
         setFornecedores(data);
     } catch (error) {
-        console.error("Erro ao carregar fornecedores:", error);
-        alert("Erro de conexão com o backend. Verifique o servidor Django.");
+        showToast('error', 'Erro!', 'Erro ao carregar fornecedores. Verifique o servidor Django.');
         setFornecedores([]);
     } finally {
         setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Tem certeza que deseja excluir este fornecedor? Esta ação é irreversível.")) {
-        try {
-            const response = await fetch(`http://127.0.0.1:8000/api/fornecedores/${id}/`, { method: "DELETE" });
-            
-            if (!response.ok) {
-                const errorText = await response.text(); 
-                throw new Error(`Falha na exclusão. Detalhe: ${errorText}`);
-            }
-            carregarFornecedores(); 
-        } catch (error) {
-            console.error("Erro ao excluir fornecedor:", error);
-            alert("Erro ao excluir fornecedor. Tente novamente ou verifique o console.");
+  const handleDelete = async (id: number, nome: string) => {
+    const confirmed = await showConfirm({
+      title: 'Excluir Fornecedor',
+      message: `Tem certeza que deseja excluir ${nome}? Esta ação não pode ser desfeita.`,
+      confirmText: 'Sim, Excluir',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(`http://127.0.0.1:8000/api/fornecedores/${id}/`, { 
+          method: "DELETE" 
+        });
+        
+        if (!response.ok) {
+            throw new Error('Erro ao excluir');
         }
+
+        showToast('success', 'Fornecedor Excluído!', 'Fornecedor removido com sucesso.');
+        carregarFornecedores(); 
+    } catch (error) {
+        showToast('error', 'Erro!', 'Não foi possível excluir o fornecedor. Tente novamente.');
     }
   };
   
@@ -106,7 +118,6 @@ export default function ListarFornecedores() {
     forn.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     forn.cidade.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
@@ -338,7 +349,7 @@ export default function ListarFornecedores() {
                               <Edit size={18} />
                             </button>
                             <button
-                              onClick={() => handleDelete(forn.id)}
+                              onClick={() => handleDelete(forn.id, forn.nome)}
                               style={{
                                 backgroundColor: "transparent",
                                 border: "none",

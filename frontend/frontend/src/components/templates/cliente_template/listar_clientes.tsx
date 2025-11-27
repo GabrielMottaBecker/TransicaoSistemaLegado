@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Edit, Trash2, Mail, Phone, Loader2 } from "lucide-react";
 import Sidebar from '../../widgets/side_bar.tsx';
+import { useToast, useConfirm } from '../../widgets/ToastContext.tsx'; // ← IMPORTAR
 
 interface Cliente {
   id: number;
@@ -23,6 +24,8 @@ export default function ListarClientes() {
   const [nivelAcesso, setNivelAcesso] = useState<string>(() => localStorage.getItem("nivelAcesso") || "user");
 
   const navigate = useNavigate();
+  const { showToast } = useToast(); // ← USAR TOAST
+  const { showConfirm } = useConfirm(); // ← USAR CONFIRM
 
   useEffect(() => {
     const user = localStorage.getItem("usuarioLogado");
@@ -45,22 +48,41 @@ export default function ListarClientes() {
       const data: Cliente[] = await response.json();
       setClientes(data);
     } catch (error) {
-      console.error("Erro ao carregar clientes:", error);
-      alert("Erro ao carregar clientes. Verifique o servidor Django.");
+      // ✅ SUBSTITUIR console.error e alert por showToast
+      showToast('error', 'Erro!', 'Erro ao carregar clientes. Verifique o servidor Django.');
       setClientes([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm("Tem certeza que deseja excluir este cliente?")) {
-      try {
-        await fetch(`http://127.0.0.1:8000/api/clientes/${id}/`, { method: "DELETE" });
-        carregarClientes();
-      } catch (error) {
-        console.error("Erro ao excluir cliente:", error);
+  // ✅ SUBSTITUIR window.confirm() por showConfirm()
+  const handleDelete = async (id: number, nome: string) => {
+    const confirmed = await showConfirm({
+      title: 'Excluir Cliente',
+      message: `Tem certeza que deseja excluir ${nome}? Esta ação não pode ser desfeita.`,
+      confirmText: 'Sim, Excluir',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/clientes/${id}/`, { 
+        method: "DELETE" 
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir');
       }
+
+      // ✅ TOAST DE SUCESSO
+      showToast('success', 'Cliente Excluído!', 'Cliente removido com sucesso.');
+      carregarClientes();
+    } catch (error) {
+      // ✅ TOAST DE ERRO
+      showToast('error', 'Erro!', 'Não foi possível excluir o cliente. Tente novamente.');
     }
   };
 
@@ -85,9 +107,7 @@ export default function ListarClientes() {
         onLogout={handleLogout}
       />
 
-      {/* Conteúdo Principal */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header */}
         <header style={{
           backgroundColor: "#fff",
           padding: "20px 50px",
@@ -136,16 +156,13 @@ export default function ListarClientes() {
           </div>
         </header>
 
-        {/* Conteúdo */}
         <div style={{ padding: "30px 50px" }}>
-          {/* Card principal */}
           <div style={{
             backgroundColor: "#fff",
             borderRadius: "12px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             overflow: "hidden"
           }}>
-            {/* Header do card */}
             <div style={{
               padding: "25px 30px",
               borderBottom: "1px solid #e0e0e0",
@@ -182,7 +199,6 @@ export default function ListarClientes() {
               </button>
             </div>
 
-            {/* Barra de busca */}
             <div style={{ padding: "20px 30px", borderBottom: "1px solid #e0e0e0" }}>
               <div style={{ position: "relative" }}>
                 <Search size={20} style={{
@@ -210,7 +226,6 @@ export default function ListarClientes() {
               </div>
             </div>
 
-            {/* Tabela */}
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
@@ -313,7 +328,7 @@ export default function ListarClientes() {
                               <Edit size={18} />
                             </button>
                             <button
-                              onClick={() => handleDelete(cliente.id)}
+                              onClick={() => handleDelete(cliente.id, cliente.nome)}
                               style={{
                                 backgroundColor: "transparent",
                                 border: "none",
