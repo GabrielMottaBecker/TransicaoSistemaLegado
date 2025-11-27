@@ -40,7 +40,7 @@ function App() {
         <div className="App">
           
           <Routes>
-            {/* 1. Rota de Login (Não Protegida) */}
+            
             <Route path="/" element={<Login />} />
 
             {/* ROTAS PROTEGIDAS */}
