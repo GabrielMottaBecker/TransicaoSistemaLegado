@@ -8,7 +8,7 @@ urlpatterns = [
     # APIs organizadas com prefixos específicos
     path('api/fornecedores/', include('fornecedores.urls')),
     path('api/clientes/', include('clientes.urls')),
-    path('api/', include('produtos.urls')),
-    path('api/', include('vendas.urls')),  # ← Remova o 'vendas/' daqui
+    path('api/produtos/', include('produtos.urls')),  # ← CORRIGIDO!
+    path('api/', include('vendas.urls')),
     path("api/reports/", include("reports.urls")),
 ]
